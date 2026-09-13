@@ -211,11 +211,17 @@ export default function App() {
       (import.meta as any).env?.VITE_DISCORD_CLIENT_ID ||
       discordConfig?.clientId ||
       ''
-    ).trim() || '123456789012345678';
+    ).trim() || '1548792649731801139';
 
-    const currentRedirect = typeof window !== 'undefined'
+    // Normalize Redirect URI to clean GitHub Pages or current origin
+    let currentRedirect = typeof window !== 'undefined'
       ? `${window.location.origin}${window.location.pathname}`
       : 'https://horizonterpp.github.io/FaceHorizonte/';
+
+    // Ensure proper trailing slash for directory URLs if on GitHub Pages
+    if (currentRedirect.includes('horizonterpp.github.io') && !currentRedirect.endsWith('/')) {
+      currentRedirect += '/';
+    }
 
     showToast('🚀 Redirigiendo a autorización oficial de Discord...');
     const discordAuthUrl = `https://discord.com/oauth2/authorize?client_id=${encodeURIComponent(

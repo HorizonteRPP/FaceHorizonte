@@ -248,7 +248,7 @@ export const getStoredDiscordConfig = (): DiscordApiConfig => {
     ? `${window.location.origin}${window.location.pathname}` 
     : 'https://horizonterpp.github.io/FaceHorizonte/';
   const defaultCfg: DiscordApiConfig = {
-    clientId: '123456789012345678',
+    clientId: '1548792649731801139',
     clientSecret: '',
     redirectUri: defaultRedirect
   };
@@ -258,7 +258,7 @@ export const getStoredDiscordConfig = (): DiscordApiConfig => {
   if (!raw) return defaultCfg;
   try {
     const parsed = JSON.parse(raw);
-    return { ...defaultCfg, ...parsed };
+    return { ...defaultCfg, ...parsed, clientId: parsed.clientId && parsed.clientId !== '123456789012345678' ? parsed.clientId : '1548792649731801139' };
   } catch {
     return defaultCfg;
   }
