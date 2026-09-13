@@ -484,13 +484,14 @@ async function startServer() {
 
   app.delete("/api/posts/:id", (req, res) => {
     const { id } = req.params;
-    const { userId, isAdmin } = req.query;
+    const userId = (req.query.userId as string) || req.body?.userId;
+    const isAdmin = req.query.isAdmin === "true" || req.body?.isAdmin === true;
     const postIndex = serverPosts.findIndex((p) => p.id === id);
     if (postIndex === -1) {
       return res.status(404).json({ error: "Publicación no encontrada" });
     }
     const post = serverPosts[postIndex];
-    if (post.authorId !== userId && isAdmin !== "true") {
+    if (post.authorId !== userId && !isAdmin) {
       return res.status(403).json({ error: "No tienes permiso para eliminar esta publicación." });
     }
     serverPosts.splice(postIndex, 1);
@@ -545,13 +546,14 @@ async function startServer() {
 
   app.delete("/api/marketplace/:id", (req, res) => {
     const { id } = req.params;
-    const { sellerId, isAdmin } = req.query;
+    const sellerId = (req.query.sellerId as string) || req.body?.sellerId;
+    const isAdmin = req.query.isAdmin === "true" || req.body?.isAdmin === true;
     const carIndex = serverCars.findIndex((c) => c.id === id);
     if (carIndex === -1) {
       return res.status(404).json({ error: "Vehículo no encontrado" });
     }
     const car = serverCars[carIndex];
-    if (car.sellerId !== sellerId && isAdmin !== "true") {
+    if (car.sellerId !== sellerId && !isAdmin) {
       return res.status(403).json({ error: "No tienes permiso para eliminar este vehículo." });
     }
     serverCars.splice(carIndex, 1);
@@ -738,6 +740,50 @@ async function startServer() {
       });
     }
     return res.status(400).json({ error: "Datos de perfil no provistos" });
+  });
+
+  // OAuth Callback Route: Supports popups and direct redirects
+  app.get("/auth/callback", (_req, res) => {
+    res.send(`<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="UTF-8">
+  <title>Verificando Discord...</title>
+  <style>
+    body { font-family: system-ui, -apple-system, sans-serif; background: #111215; color: #fff; display: flex; align-items: center; justify-content: center; height: 100vh; margin: 0; }
+    .card { background: #1e2025; padding: 28px 36px; border-radius: 20px; border: 1px solid #333642; text-align: center; max-width: 380px; box-shadow: 0 12px 30px rgba(0,0,0,0.6); }
+    .spin { width: 36px; height: 36px; border: 3.5px solid #5865F2; border-top-color: transparent; border-radius: 50%; animation: spin 0.8s linear infinite; margin: 0 auto 16px; }
+    @keyframes spin { to { transform: rotate(360deg); } }
+    h2 { font-size: 17px; margin: 0 0 8px; font-weight: 700; }
+    p { font-size: 13px; color: #949ba4; margin: 0; line-height: 1.4; }
+  </style>
+</head>
+<body>
+  <div class="card">
+    <div class="spin"></div>
+    <h2>Verificando con Discord...</h2>
+    <p>Esta ventana se cerrará automáticamente en unos segundos.</p>
+  </div>
+  <script>
+    (function() {
+      var hash = window.location.hash || '';
+      var search = window.location.search || '';
+      var payload = { type: 'DISCORD_OAUTH_PAYLOAD', hash: hash, search: search };
+      if (window.opener) {
+        try {
+          window.opener.postMessage(payload, '*');
+          setTimeout(function() { window.close(); }, 600);
+          return;
+        } catch (err) {
+          console.error(err);
+        }
+      }
+      // If not opened in popup, redirect back to main app
+      window.location.href = '/' + (hash || search);
+    })();
+  </script>
+</body>
+</html>`);
   });
 
   // Vite middleware in development vs static dist in production

@@ -99,57 +99,106 @@ export default function App() {
     }, 3500);
   };
 
-  // Listen for real Discord OAuth2 token redirect in URL hash (#access_token=...)
+  // Helper to verify Discord access token and log in
+  const verifyDiscordToken = async (token: string) => {
+    showToast('🔄 Verificando cuenta de Discord oficial...');
+    try {
+      const res = await fetch('https://discord.com/api/users/@me', {
+        headers: { Authorization: `Bearer ${token}` }
+      });
+      if (!res.ok) throw new Error('Failed to fetch Discord user');
+      const discordData = await res.json();
+      if (discordData && (discordData.username || discordData.id)) {
+        const avatar = discordData.avatar
+          ? `https://cdn.discordapp.com/avatars/${discordData.id}/${discordData.avatar}.png?size=256`
+          : `https://api.dicebear.com/7.x/bottts/svg?seed=${encodeURIComponent(discordData.username || 'discord')}`;
+
+        const discTag =
+          discordData.discriminator && discordData.discriminator !== '0'
+            ? `${discordData.username}#${discordData.discriminator}`
+            : `@${discordData.username}`;
+
+        const user: User = {
+          id: `discord_${discordData.id}`,
+          username: discordData.global_name || discordData.username,
+          avatar,
+          role: 'citizen',
+          isDiscordUser: true,
+          discordTag: discTag,
+          bio: `Cuenta oficial verificada con Discord en Roblox Horizonte RP.`,
+          createdAt: Date.now()
+        };
+
+        handleRegisterSuccess(user);
+        showToast(`🎉 ¡Bienvenido/a, ${user.username}! Conectado con tu cuenta real de Discord.`);
+      }
+    } catch (err) {
+      console.error('Error fetching Discord profile:', err);
+      showToast('⚠️ No se pudo obtener el perfil de Discord. Verifica tu conexión.');
+    } finally {
+      if (typeof window !== 'undefined') {
+        window.history.replaceState(null, '', window.location.pathname);
+      }
+    }
+  };
+
+  // Quick 1-click Demo Login for testing before setting up Discord bot
+  const handleQuickDemoLogin = () => {
+    const demoUser: User = {
+      id: `user_${Date.now().toString(36)}`,
+      username: 'Ciudadano_RP',
+      avatar: 'https://images.unsplash.com/photo-1535713875002-d1d0cf377fde?w=200&h=200&fit=crop',
+      role: 'citizen',
+      bio: 'Ciudadano activo de Horizonte RP explorando la ciudad.',
+      createdAt: Date.now()
+    };
+    handleRegisterSuccess(demoUser);
+    showToast(`¡Bienvenido/a, ${demoUser.username}!`);
+  };
+
+  // Listen for Discord OAuth2 token redirect in URL hash or cross-window postMessage
   useEffect(() => {
     if (typeof window === 'undefined') return;
+
+    // 1. Direct Hash Check
     const hash = window.location.hash;
+    const search = window.location.search;
+
     if (hash && hash.includes('access_token=')) {
       const params = new URLSearchParams(hash.replace('#', '?'));
       const token = params.get('access_token');
       if (token) {
-        showToast('🔄 Verificando cuenta de Discord oficial...');
-        fetch('https://discord.com/api/users/@me', {
-          headers: { Authorization: `Bearer ${token}` }
-        })
-          .then((res) => {
-            if (!res.ok) throw new Error('Failed to fetch Discord user');
-            return res.json();
-          })
-          .then((discordData) => {
-            if (discordData && (discordData.username || discordData.id)) {
-              const avatar = discordData.avatar
-                ? `https://cdn.discordapp.com/avatars/${discordData.id}/${discordData.avatar}.png?size=256`
-                : `https://api.dicebear.com/7.x/bottts/svg?seed=${encodeURIComponent(discordData.username || 'discord')}`;
-
-              const discTag = discordData.discriminator && discordData.discriminator !== '0'
-                ? `${discordData.username}#${discordData.discriminator}`
-                : `@${discordData.username}`;
-
-              const user: User = {
-                id: `discord_${discordData.id}`,
-                username: discordData.global_name || discordData.username,
-                avatar,
-                role: 'citizen',
-                isDiscordUser: true,
-                discordTag: discTag,
-                bio: `Cuenta oficial verificada con Discord en Roblox Horizonte RP.`,
-                createdAt: Date.now()
-              };
-
-              handleRegisterSuccess(user);
-              showToast(`🎉 ¡Bienvenido/a, ${user.username}! Conectado con tu cuenta real de Discord.`);
-            }
-          })
-          .catch((err) => {
-            console.error('Error fetching Discord profile:', err);
-            showToast('⚠️ No se pudo obtener el perfil de Discord. Puedes entrar con tu usuario directo.');
-          })
-          .finally(() => {
-            // Clean up the URL hash
-            window.history.replaceState(null, '', window.location.pathname + window.location.search);
-          });
+        verifyDiscordToken(token);
       }
+    } else if (hash.includes('error=') || search.includes('error=')) {
+      const params = new URLSearchParams(hash ? hash.replace('#', '?') : search);
+      const errDesc = params.get('error_description') || params.get('error') || 'Autorización cancelada';
+      showToast(`⚠️ Discord: ${decodeURIComponent(errDesc.replace(/\+/g, ' '))}`);
+      window.history.replaceState(null, '', window.location.pathname);
     }
+
+    // 2. PostMessage listener for popup or /auth/callback
+    const handleMessage = (event: MessageEvent) => {
+      if (event.data?.type === 'DISCORD_OAUTH_PAYLOAD') {
+        const payload = event.data;
+        if (payload.hash && payload.hash.includes('access_token=')) {
+          const params = new URLSearchParams(payload.hash.replace('#', '?'));
+          const token = params.get('access_token');
+          if (token) {
+            verifyDiscordToken(token);
+          }
+        } else if (payload.hash?.includes('error=') || payload.search?.includes('error=')) {
+          const params = new URLSearchParams(payload.hash ? payload.hash.replace('#', '?') : payload.search);
+          const errDesc = params.get('error_description') || params.get('error');
+          if (errDesc) {
+            showToast(`⚠️ Discord: ${decodeURIComponent(errDesc.replace(/\+/g, ' '))}`);
+          }
+        }
+      }
+    };
+
+    window.addEventListener('message', handleMessage);
+    return () => window.removeEventListener('message', handleMessage);
   }, []);
 
   // Sync body theme class with state
@@ -172,32 +221,52 @@ export default function App() {
     showToast('Configuración de Discord API guardada.');
   };
 
-  // Direct Official Discord OAuth2 authorization trigger - NO MODAL, DIRECT REDIRECT
+  // Direct Official Discord OAuth2 authorization trigger
   const handleStartDiscordOAuth = () => {
     const activeClientId = (
       (import.meta as any).env?.VITE_DISCORD_CLIENT_ID ||
       discordConfig?.clientId ||
-      '123456789012345678'
+      ''
     ).trim();
 
-    const currentRedirect = typeof window !== 'undefined'
-      ? `${window.location.origin}${window.location.pathname}`
-      : 'http://localhost:3000/';
+    // If no real Client ID has been provided yet, open config modal with guidance
+    if (!activeClientId || activeClientId === '123456789012345678' || activeClientId.length < 15) {
+      setDiscordConfigModalOpen(true);
+      showToast('ℹ️ Ingresa tu Client ID de Discord para conectar tu bot oficial o usa el modo rápido.');
+      return;
+    }
 
-    showToast('🚀 Redirigiendo a autorización oficial de Discord.com...');
+    const currentRedirect = typeof window !== 'undefined'
+      ? `${window.location.origin}/auth/callback`
+      : 'http://localhost:3000/auth/callback';
+
+    showToast('🚀 Conectando con autorización oficial de Discord.com...');
     const discordAuthUrl = `https://discord.com/oauth2/authorize?client_id=${encodeURIComponent(
       activeClientId
     )}&response_type=token&scope=identify&redirect_uri=${encodeURIComponent(currentRedirect)}`;
 
-    try {
-      if (window.top && window.top !== window) {
-        window.top.location.href = discordAuthUrl;
-        return;
+    const popupWidth = 580;
+    const popupHeight = 720;
+    const left = typeof window !== 'undefined' ? window.screenX + (window.outerWidth - popupWidth) / 2 : 100;
+    const top = typeof window !== 'undefined' ? window.screenY + (window.outerHeight - popupHeight) / 2 : 100;
+
+    const popup = window.open(
+      discordAuthUrl,
+      'discord_oauth_popup',
+      `width=${popupWidth},height=${popupHeight},left=${left},top=${top},scrollbars=yes,status=yes`
+    );
+
+    if (!popup || popup.closed || typeof popup.closed === 'undefined') {
+      try {
+        if (window.top && window.top !== window) {
+          window.top.location.href = discordAuthUrl;
+          return;
+        }
+      } catch {
+        // Cross-origin fallback
       }
-    } catch {
-      // Cross-origin iframe restriction fallback
+      window.location.href = discordAuthUrl;
     }
-    window.location.href = discordAuthUrl;
   };
 
   // Sync with server API if reachable
@@ -275,6 +344,12 @@ export default function App() {
     setPosts(updated);
     savePosts(updated);
     showToast('Publicación eliminada.');
+
+    fetch(`/api/posts/${postId}`, {
+      method: 'DELETE',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ userId: currentUser?.id, isAdmin: !!adminSession.isAdmin1 || !!adminSession.isAdmin2 })
+    }).catch(() => {});
   };
 
   const handleToggleReaction = (postId: string, type: 'heart' | 'fire' | 'clap') => {
@@ -300,6 +375,12 @@ export default function App() {
 
     setPosts(updated);
     savePosts(updated);
+
+    fetch(`/api/posts/${postId}/react`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ type, userId: currentUser?.id || 'guest' })
+    }).catch(() => {});
   };
 
   const handleAddComment = (postId: string, text: string) => {
@@ -325,6 +406,12 @@ export default function App() {
 
     setPosts(updated);
     savePosts(updated);
+
+    fetch(`/api/posts/${postId}/comment`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(newComment)
+    }).catch(() => {});
   };
 
   // Handlers for Marketplace
@@ -356,6 +443,12 @@ export default function App() {
     setCars(updated);
     saveMarketplaceCars(updated);
     showToast('Vehículo retirado del marketplace.');
+
+    fetch(`/api/marketplace/${carId}`, {
+      method: 'DELETE',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ sellerId: currentUser?.id, isAdmin: !!adminSession.isAdmin1 || !!adminSession.isAdmin2 })
+    }).catch(() => {});
   };
 
   const handleContactSeller = (car: MarketplaceCar) => {
@@ -824,6 +917,7 @@ export default function App() {
         onOpenSosModal={() => setSosModalOpen(true)}
         onOpenMessages={handleOpenMessages}
         onOpenProfile={() => setProfileModalOpen(true)}
+        onOpenDiscordConfig={() => setDiscordConfigModalOpen(true)}
       />
 
       {/* Main Views */}
@@ -894,6 +988,7 @@ export default function App() {
         config={discordConfig}
         onSaveConfig={handleSaveDiscordConfig}
         showToast={showToast}
+        onDemoLogin={handleQuickDemoLogin}
       />
 
       {/* Create Group Modal */}
