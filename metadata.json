@@ -1,0 +1,6 @@
+{
+  "name": "FaceHorizont - Horizonte RP",
+  "description": "Red social estilo Facebook para la comunidad de Roblox Horizonte RP con verificación oficial por Discord, grupos con roles y permisos, marketplace de autos y chat privado.",
+  "requestFramePermissions": [],
+  "majorCapabilities": ["MAJOR_CAPABILITY_SERVER_SIDE_GEMINI_API"]
+}

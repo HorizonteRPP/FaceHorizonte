@@ -1,0 +1,57 @@
+@import "tailwindcss";
+
+@layer base {
+  body {
+    font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+    min-height: 100vh;
+    margin: 0;
+    padding: 0;
+    overflow-x: hidden;
+    transition: background-color 0.2s ease, color 0.2s ease;
+  }
+
+  /* Sleek modern charcoal dark theme (as requested: "un poco gris esta todo rojo no me gusta") */
+  body.theme-charcoal {
+    background: radial-gradient(circle at 50% 0%, #1e2025 0%, #131417 65%, #0e0f12 100%);
+    background-attachment: fixed;
+    color: #e2e8f0;
+  }
+
+  /* Clean modern white interface (as requested: "y tambien que haya boton , negro o blanco interfaz") */
+  body.theme-light {
+    background: #f5f6f9;
+    background-attachment: fixed;
+    color: #1e293b;
+  }
+}
+
+/* Custom scrollbars */
+body.theme-charcoal ::-webkit-scrollbar-track {
+  background: #131417;
+}
+body.theme-charcoal ::-webkit-scrollbar-thumb {
+  background: #353840;
+  border-radius: 4px;
+}
+body.theme-charcoal ::-webkit-scrollbar-thumb:hover {
+  background: #4a4e58;
+}
+
+body.theme-light ::-webkit-scrollbar-track {
+  background: #e2e8f0;
+}
+body.theme-light ::-webkit-scrollbar-thumb {
+  background: #cbd5e1;
+  border-radius: 4px;
+}
+body.theme-light ::-webkit-scrollbar-thumb:hover {
+  background: #94a3b8;
+}
+
+.glow-red {
+  box-shadow: 0 0 20px -5px rgba(220, 38, 38, 0.35);
+}
+
+.glow-red-lg {
+  box-shadow: 0 0 35px -5px rgba(239, 68, 68, 0.45);
+}
