@@ -46,7 +46,6 @@ import { MarketplaceView } from './components/MarketplaceView';
 import { GroupsView } from './components/GroupsView';
 import { CreateGroupModal } from './components/CreateGroupModal';
 import { MessengerDrawer } from './components/MessengerDrawer';
-import { AuthModal } from './components/AuthModal';
 import { AdminModal } from './components/AdminModal';
 import { SosModal } from './components/SosModal';
 import { ProfileModal } from './components/ProfileModal';
@@ -79,7 +78,6 @@ export default function App() {
   const [dbHealth, setDbHealth] = useState<DatabaseHealth>(() => getDatabaseHealth());
 
   // Modals Visibility
-  const [authModalOpen, setAuthModalOpen] = useState(false);
   const [adminModalOpen, setAdminModalOpen] = useState(false);
   const [sosModalOpen, setSosModalOpen] = useState(false);
   const [createGroupModalOpen, setCreateGroupModalOpen] = useState(false);
@@ -101,6 +99,59 @@ export default function App() {
     }, 3500);
   };
 
+  // Listen for real Discord OAuth2 token redirect in URL hash (#access_token=...)
+  useEffect(() => {
+    if (typeof window === 'undefined') return;
+    const hash = window.location.hash;
+    if (hash && hash.includes('access_token=')) {
+      const params = new URLSearchParams(hash.replace('#', '?'));
+      const token = params.get('access_token');
+      if (token) {
+        showToast('🔄 Verificando cuenta de Discord oficial...');
+        fetch('https://discord.com/api/users/@me', {
+          headers: { Authorization: `Bearer ${token}` }
+        })
+          .then((res) => {
+            if (!res.ok) throw new Error('Failed to fetch Discord user');
+            return res.json();
+          })
+          .then((discordData) => {
+            if (discordData && (discordData.username || discordData.id)) {
+              const avatar = discordData.avatar
+                ? `https://cdn.discordapp.com/avatars/${discordData.id}/${discordData.avatar}.png?size=256`
+                : `https://api.dicebear.com/7.x/bottts/svg?seed=${encodeURIComponent(discordData.username || 'discord')}`;
+
+              const discTag = discordData.discriminator && discordData.discriminator !== '0'
+                ? `${discordData.username}#${discordData.discriminator}`
+                : `@${discordData.username}`;
+
+              const user: User = {
+                id: `discord_${discordData.id}`,
+                username: discordData.global_name || discordData.username,
+                avatar,
+                role: 'citizen',
+                isDiscordUser: true,
+                discordTag: discTag,
+                bio: `Cuenta oficial verificada con Discord en Roblox Horizonte RP.`,
+                createdAt: Date.now()
+              };
+
+              handleRegisterSuccess(user);
+              showToast(`🎉 ¡Bienvenido/a, ${user.username}! Conectado con tu cuenta real de Discord.`);
+            }
+          })
+          .catch((err) => {
+            console.error('Error fetching Discord profile:', err);
+            showToast('⚠️ No se pudo obtener el perfil de Discord. Puedes entrar con tu usuario directo.');
+          })
+          .finally(() => {
+            // Clean up the URL hash
+            window.history.replaceState(null, '', window.location.pathname + window.location.search);
+          });
+      }
+    }
+  }, []);
+
   // Sync body theme class with state
   useEffect(() => {
     document.body.className = theme === 'light' ? 'theme-light' : 'theme-charcoal';
@@ -119,6 +170,34 @@ export default function App() {
     setDiscordConfig(newCfg);
     saveStoredDiscordConfig(newCfg);
     showToast('Configuración de Discord API guardada.');
+  };
+
+  // Direct Official Discord OAuth2 authorization trigger - NO MODAL, DIRECT REDIRECT
+  const handleStartDiscordOAuth = () => {
+    const activeClientId = (
+      (import.meta as any).env?.VITE_DISCORD_CLIENT_ID ||
+      discordConfig?.clientId ||
+      '123456789012345678'
+    ).trim();
+
+    const currentRedirect = typeof window !== 'undefined'
+      ? `${window.location.origin}${window.location.pathname}`
+      : 'http://localhost:3000/';
+
+    showToast('🚀 Redirigiendo a autorización oficial de Discord.com...');
+    const discordAuthUrl = `https://discord.com/oauth2/authorize?client_id=${encodeURIComponent(
+      activeClientId
+    )}&response_type=token&scope=identify&redirect_uri=${encodeURIComponent(currentRedirect)}`;
+
+    try {
+      if (window.top && window.top !== window) {
+        window.top.location.href = discordAuthUrl;
+        return;
+      }
+    } catch {
+      // Cross-origin iframe restriction fallback
+    }
+    window.location.href = discordAuthUrl;
   };
 
   // Sync with server API if reachable
@@ -228,6 +307,7 @@ export default function App() {
 
     const newComment = {
       id: `comment_${Date.now()}_${Math.random().toString(36).substr(2, 4)}`,
+      postId,
       authorId: currentUser.id,
       authorName: currentUser.username,
       authorAvatar: currentUser.avatar,
@@ -280,7 +360,7 @@ export default function App() {
 
   const handleContactSeller = (car: MarketplaceCar) => {
     if (!currentUser) {
-      setAuthModalOpen(true);
+      handleStartDiscordOAuth();
       return;
     }
     setActiveChatUserId(car.sellerId);
@@ -353,9 +433,15 @@ export default function App() {
     }, 1200);
   };
 
+  const handleSendChatMessage = (msg: ChatMessage) => {
+    const updated = [...messages, msg];
+    setMessages(updated);
+    saveMessages(updated);
+  };
+
   const handleOpenMessages = (targetUserId?: string) => {
     if (!currentUser) {
-      setAuthModalOpen(true);
+      handleStartDiscordOAuth();
       return;
     }
     if (targetUserId) {
@@ -387,7 +473,7 @@ export default function App() {
 
   const handleJoinGroup = (groupId: string) => {
     if (!currentUser) {
-      setAuthModalOpen(true);
+      handleStartDiscordOAuth();
       return;
     }
 
@@ -473,6 +559,7 @@ export default function App() {
     if (!currentUser) return;
     const newComment = {
       id: `gc_${Date.now()}`,
+      postId,
       authorId: currentUser.id,
       authorName: currentUser.username,
       authorAvatar: currentUser.avatar,
@@ -730,7 +817,7 @@ export default function App() {
         unreadCount={unreadMessagesCount}
         theme={theme}
         onToggleTheme={handleToggleTheme}
-        onOpenAuth={() => setAuthModalOpen(true)}
+        onOpenAuth={handleStartDiscordOAuth}
         onLogout={handleLogout}
         onOpenAdminModal={() => setAdminModalOpen(true)}
         onExitAdmin={handleExitAdmin}
@@ -748,7 +835,7 @@ export default function App() {
             adminSession={adminSession}
             theme={theme}
             registeredUsers={registeredUsers}
-            onOpenAuth={() => setAuthModalOpen(true)}
+            onOpenAuth={handleStartDiscordOAuth}
             onAddPost={handleAddPost}
             onDeletePost={handleDeletePost}
             onToggleReaction={handleToggleReaction}
@@ -762,7 +849,7 @@ export default function App() {
             currentUser={currentUser}
             adminSession={adminSession}
             theme={theme}
-            onOpenAuth={() => setAuthModalOpen(true)}
+            onOpenAuth={handleStartDiscordOAuth}
             onAddCar={handleAddCar}
             onDeleteCar={handleDeleteCar}
             onContactSeller={handleContactSeller}
@@ -773,7 +860,7 @@ export default function App() {
             currentUser={currentUser}
             adminSession={adminSession}
             theme={theme}
-            onOpenAuth={() => setAuthModalOpen(true)}
+            onOpenAuth={handleStartDiscordOAuth}
             onOpenCreateGroup={() => setCreateGroupModalOpen(true)}
             onJoinGroup={handleJoinGroup}
             onLeaveGroup={handleLeaveGroup}
@@ -795,18 +882,9 @@ export default function App() {
         activeTargetUserId={activeChatUserId}
         setActiveTargetUserId={setActiveChatUserId}
         allMessages={messages}
-        onSendMessage={handleSendMessage}
-        onOpenAuth={() => setAuthModalOpen(true)}
+        onSendMessage={handleSendChatMessage}
+        onOpenAuth={handleStartDiscordOAuth}
         carContext={carChatContext}
-      />
-
-      {/* Auth Modal */}
-      <AuthModal
-        isOpen={authModalOpen}
-        onClose={() => setAuthModalOpen(false)}
-        onRegisterSuccess={handleRegisterSuccess}
-        registeredUsers={registeredUsers}
-        discordConfig={discordConfig}
       />
 
       {/* Discord API Configuration Modal */}
@@ -824,7 +902,7 @@ export default function App() {
         onClose={() => setCreateGroupModalOpen(false)}
         currentUser={currentUser}
         onCreateGroup={handleCreateGroup}
-        onOpenAuth={() => setAuthModalOpen(true)}
+        onOpenAuth={handleStartDiscordOAuth}
       />
 
       {/* Admin / SuperAdmin Master Modal */}
