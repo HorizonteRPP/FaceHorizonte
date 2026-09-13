@@ -8,7 +8,6 @@ interface DiscordConfigModalProps {
   config: DiscordApiConfig;
   onSaveConfig: (cfg: DiscordApiConfig) => void;
   showToast: (msg: string) => void;
-  onDemoLogin?: () => void;
 }
 
 export const DiscordConfigModal: React.FC<DiscordConfigModalProps> = ({
@@ -16,8 +15,7 @@ export const DiscordConfigModal: React.FC<DiscordConfigModalProps> = ({
   onClose,
   config,
   onSaveConfig,
-  showToast,
-  onDemoLogin
+  showToast
 }) => {
   const [clientId, setClientId] = useState(config.clientId || '');
   const [clientSecret, setClientSecret] = useState(config.clientSecret || '');
@@ -217,8 +215,8 @@ export const DiscordConfigModal: React.FC<DiscordConfigModalProps> = ({
             )}
           </div>
 
-          {/* Save Button & Quick Demo Login */}
-          <div className="pt-3 border-t border-[#2e3138] space-y-2">
+          {/* Save Button */}
+          <div className="pt-3 border-t border-[#2e3138]">
             <button
               type="submit"
               className="w-full py-3 rounded-xl bg-[#5865F2] hover:bg-[#4752C4] text-white font-extrabold text-sm shadow-lg shadow-[#5865F2]/20 transition-all cursor-pointer flex items-center justify-center gap-2"
@@ -226,19 +224,6 @@ export const DiscordConfigModal: React.FC<DiscordConfigModalProps> = ({
               <Check className="w-4 h-4" />
               <span>Guardar Configuración de Discord</span>
             </button>
-
-            {onDemoLogin && (
-              <button
-                type="button"
-                onClick={() => {
-                  onClose();
-                  onDemoLogin();
-                }}
-                className="w-full py-2.5 rounded-xl bg-[#282a30] hover:bg-[#343740] text-gray-300 hover:text-white text-xs font-semibold transition-all cursor-pointer flex items-center justify-center gap-2 border border-[#3b3e47]"
-              >
-                <span>👤 Entrar como Ciudadano de Prueba (Modo Rápido)</span>
-              </button>
-            )}
           </div>
         </form>
       </div>

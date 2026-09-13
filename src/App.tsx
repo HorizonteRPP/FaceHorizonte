@@ -49,7 +49,6 @@ import { MessengerDrawer } from './components/MessengerDrawer';
 import { AdminModal } from './components/AdminModal';
 import { SosModal } from './components/SosModal';
 import { ProfileModal } from './components/ProfileModal';
-import { DiscordConfigModal } from './components/DiscordConfigModal';
 import { Footer } from './components/Footer';
 
 export default function App() {
@@ -82,7 +81,6 @@ export default function App() {
   const [sosModalOpen, setSosModalOpen] = useState(false);
   const [createGroupModalOpen, setCreateGroupModalOpen] = useState(false);
   const [profileModalOpen, setProfileModalOpen] = useState(false);
-  const [discordConfigModalOpen, setDiscordConfigModalOpen] = useState(false);
 
   // Private Chat Drawer State
   const [messengerOpen, setMessengerOpen] = useState(false);
@@ -140,20 +138,6 @@ export default function App() {
         window.history.replaceState(null, '', window.location.pathname);
       }
     }
-  };
-
-  // Quick 1-click Demo Login for testing before setting up Discord bot
-  const handleQuickDemoLogin = () => {
-    const demoUser: User = {
-      id: `user_${Date.now().toString(36)}`,
-      username: 'Ciudadano_RP',
-      avatar: 'https://images.unsplash.com/photo-1535713875002-d1d0cf377fde?w=200&h=200&fit=crop',
-      role: 'citizen',
-      bio: 'Ciudadano activo de Horizonte RP explorando la ciudad.',
-      createdAt: Date.now()
-    };
-    handleRegisterSuccess(demoUser);
-    showToast(`¡Bienvenido/a, ${demoUser.username}!`);
   };
 
   // Listen for Discord OAuth2 token redirect in URL hash or cross-window postMessage
@@ -221,52 +205,34 @@ export default function App() {
     showToast('Configuración de Discord API guardada.');
   };
 
-  // Direct Official Discord OAuth2 authorization trigger
+  // Direct Official Discord OAuth2 authorization trigger - DIRECT TO DISCORD WEB
   const handleStartDiscordOAuth = () => {
     const activeClientId = (
       (import.meta as any).env?.VITE_DISCORD_CLIENT_ID ||
       discordConfig?.clientId ||
       ''
-    ).trim();
-
-    // If no real Client ID has been provided yet, open config modal with guidance
-    if (!activeClientId || activeClientId === '123456789012345678' || activeClientId.length < 15) {
-      setDiscordConfigModalOpen(true);
-      showToast('ℹ️ Ingresa tu Client ID de Discord para conectar tu bot oficial o usa el modo rápido.');
-      return;
-    }
+    ).trim() || '123456789012345678';
 
     const currentRedirect = typeof window !== 'undefined'
-      ? `${window.location.origin}/auth/callback`
-      : 'http://localhost:3000/auth/callback';
+      ? `${window.location.origin}${window.location.pathname}`
+      : 'https://horizonterpp.github.io/FaceHorizonte/';
 
-    showToast('🚀 Conectando con autorización oficial de Discord.com...');
+    showToast('🚀 Redirigiendo a autorización oficial de Discord...');
     const discordAuthUrl = `https://discord.com/oauth2/authorize?client_id=${encodeURIComponent(
       activeClientId
     )}&response_type=token&scope=identify&redirect_uri=${encodeURIComponent(currentRedirect)}`;
 
-    const popupWidth = 580;
-    const popupHeight = 720;
-    const left = typeof window !== 'undefined' ? window.screenX + (window.outerWidth - popupWidth) / 2 : 100;
-    const top = typeof window !== 'undefined' ? window.screenY + (window.outerHeight - popupHeight) / 2 : 100;
-
-    const popup = window.open(
-      discordAuthUrl,
-      'discord_oauth_popup',
-      `width=${popupWidth},height=${popupHeight},left=${left},top=${top},scrollbars=yes,status=yes`
-    );
-
-    if (!popup || popup.closed || typeof popup.closed === 'undefined') {
-      try {
-        if (window.top && window.top !== window) {
-          window.top.location.href = discordAuthUrl;
-          return;
-        }
-      } catch {
-        // Cross-origin fallback
+    try {
+      if (window.top && window.top !== window) {
+        window.top.location.href = discordAuthUrl;
+        return;
       }
-      window.location.href = discordAuthUrl;
+    } catch {
+      // In case of cross-origin iframe security restriction:
+      window.open(discordAuthUrl, '_blank');
+      return;
     }
+    window.location.href = discordAuthUrl;
   };
 
   // Sync with server API if reachable
@@ -917,7 +883,6 @@ export default function App() {
         onOpenSosModal={() => setSosModalOpen(true)}
         onOpenMessages={handleOpenMessages}
         onOpenProfile={() => setProfileModalOpen(true)}
-        onOpenDiscordConfig={() => setDiscordConfigModalOpen(true)}
       />
 
       {/* Main Views */}
@@ -979,16 +944,6 @@ export default function App() {
         onSendMessage={handleSendChatMessage}
         onOpenAuth={handleStartDiscordOAuth}
         carContext={carChatContext}
-      />
-
-      {/* Discord API Configuration Modal */}
-      <DiscordConfigModal
-        isOpen={discordConfigModalOpen}
-        onClose={() => setDiscordConfigModalOpen(false)}
-        config={discordConfig}
-        onSaveConfig={handleSaveDiscordConfig}
-        showToast={showToast}
-        onDemoLogin={handleQuickDemoLogin}
       />
 
       {/* Create Group Modal */}

@@ -244,7 +244,9 @@ export const saveStoredTheme = (theme: ThemeMode): void => {
 
 // Discord OAuth2 Config Storage (Only for user name & avatar)
 export const getStoredDiscordConfig = (): DiscordApiConfig => {
-  const defaultRedirect = typeof window !== 'undefined' ? `${window.location.origin}/` : 'http://localhost:3000/';
+  const defaultRedirect = typeof window !== 'undefined' 
+    ? `${window.location.origin}${window.location.pathname}` 
+    : 'https://horizonterpp.github.io/FaceHorizonte/';
   const defaultCfg: DiscordApiConfig = {
     clientId: '123456789012345678',
     clientSecret: '',
