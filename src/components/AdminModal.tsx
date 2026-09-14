@@ -1030,7 +1030,7 @@ export const AdminModal: React.FC<AdminModalProps> = ({
                           type="text"
                           value={discordForm.clientId}
                           onChange={(e) => setDiscordForm({ ...discordForm, clientId: e.target.value })}
-                          placeholder="Ej. 123456789012345678"
+                          placeholder="1548792649731801139"
                           className={`w-full px-3.5 py-2.5 rounded-xl border text-xs focus:outline-none font-mono ${inputBg}`}
                           required
                         />
