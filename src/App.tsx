@@ -37,7 +37,8 @@ import {
   getStoredDiscordConfig,
   saveStoredDiscordConfig,
   getStoredSupabaseConfig,
-  saveStoredSupabaseConfig
+  saveStoredSupabaseConfig,
+  resetAllApplicationData
 } from './services/storage';
 
 import { Header } from './components/Header';
@@ -748,13 +749,14 @@ export default function App() {
   };
 
   const handleResetDatabase = async () => {
-    localStorage.clear();
-    setPosts(getPosts());
-    setCars(getMarketplaceCars());
-    setMessages(getMessages());
-    setGroups(getGroups());
-    setRegisteredUsers(getRegisteredUsers());
-    showToast('Base de datos y caché local restaurados.');
+    resetAllApplicationData();
+    setPosts([]);
+    setCars([]);
+    setMessages([]);
+    setGroups([]);
+    setRegisteredUsers([]);
+    setActiveChatUserId(null);
+    showToast('🧹 Base de datos purgada por completo. Cero publicaciones, cero chats, cero vehículos.');
   };
 
   const handleExportJson = () => {
@@ -944,6 +946,7 @@ export default function App() {
         isOpen={messengerOpen}
         onClose={() => setMessengerOpen(false)}
         currentUser={currentUser}
+        registeredUsers={registeredUsers}
         activeTargetUserId={activeChatUserId}
         setActiveTargetUserId={setActiveChatUserId}
         allMessages={messages}

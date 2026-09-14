@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useMemo } from 'react';
 import { Group, GroupMember, GroupPost, GroupMessage, User, AdminSession, ThemeMode } from '../types';
 import { 
   Users, 
@@ -66,6 +66,20 @@ export const GroupsView: React.FC<GroupsViewProps> = ({
   const [searchQuery, setSearchQuery] = useState('');
   const [selectedCategory, setSelectedCategory] = useState<string>('all');
   const [filterMyGroups, setFilterMyGroups] = useState(false);
+
+  // Dynamic categories from created groups
+  const availableCategories = useMemo(() => {
+    const defaultCats = ['Crews & Facciones', 'Policía & Seguridad', 'Mecánicos & Carreras', 'Empresas & Negocios'];
+    const cats = new Set<string>();
+    groups.forEach((g) => {
+      if (g.category?.trim()) cats.add(g.category.trim());
+    });
+    // Combine existing categories with defaults if empty
+    defaultCats.forEach((dc) => {
+      if (cats.size < 4) cats.add(dc);
+    });
+    return Array.from(cats);
+  }, [groups]);
 
   // Group Wall composer state
   const [postContent, setPostContent] = useState('');
@@ -286,38 +300,19 @@ export const GroupsView: React.FC<GroupsViewProps> = ({
                 </button>
               )}
 
-              <button
-                onClick={() => setSelectedCategory(selectedCategory === 'Crews & Facciones' ? 'all' : 'Crews & Facciones')}
-                className={`px-3.5 py-1.5 rounded-xl text-xs font-bold transition-all whitespace-nowrap cursor-pointer ${
-                  selectedCategory === 'Crews & Facciones'
-                    ? 'bg-red-700 text-white shadow-md'
-                    : 'bg-[#140000] text-red-300 hover:bg-red-950/60'
-                }`}
-              >
-                Crews & Facciones
-              </button>
-
-              <button
-                onClick={() => setSelectedCategory(selectedCategory === 'Policía HPD & Seguridad' ? 'all' : 'Policía HPD & Seguridad')}
-                className={`px-3.5 py-1.5 rounded-xl text-xs font-bold transition-all whitespace-nowrap cursor-pointer ${
-                  selectedCategory === 'Policía HPD & Seguridad'
-                    ? 'bg-red-700 text-white shadow-md'
-                    : 'bg-[#140000] text-red-300 hover:bg-red-950/60'
-                }`}
-              >
-                Policía HPD
-              </button>
-
-              <button
-                onClick={() => setSelectedCategory(selectedCategory === 'Mecánicos & Carreras' ? 'all' : 'Mecánicos & Carreras')}
-                className={`px-3.5 py-1.5 rounded-xl text-xs font-bold transition-all whitespace-nowrap cursor-pointer ${
-                  selectedCategory === 'Mecánicos & Carreras'
-                    ? 'bg-red-700 text-white shadow-md'
-                    : 'bg-[#140000] text-red-300 hover:bg-red-950/60'
-                }`}
-              >
-                Mecánicos & Carreras
-              </button>
+              {availableCategories.map((cat) => (
+                <button
+                  key={cat}
+                  onClick={() => setSelectedCategory(selectedCategory === cat ? 'all' : cat)}
+                  className={`px-3.5 py-1.5 rounded-xl text-xs font-bold transition-all whitespace-nowrap cursor-pointer ${
+                    selectedCategory === cat
+                      ? 'bg-red-700 text-white shadow-md'
+                      : 'bg-[#140000] text-red-300 hover:bg-red-950/60'
+                  }`}
+                >
+                  {cat}
+                </button>
+              ))}
             </div>
           </div>
 

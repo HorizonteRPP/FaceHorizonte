@@ -154,7 +154,7 @@ export interface Group {
   id: string;
   name: string;
   description: string;
-  category: 'Crews & Facciones' | 'Policía HPD & Seguridad' | 'Mecánicos & Carreras' | 'Empresas & Negocios' | 'Comunidad General';
+  category: string;
   privacy: 'public' | 'private';
   coverUrl: string;
   iconUrl: string;

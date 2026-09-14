@@ -2,17 +2,18 @@ import { User, Post, MarketplaceCar, ChatMessage, AdminSession, DatabaseHealth, 
 import { INITIAL_POSTS, INITIAL_MARKETPLACE, INITIAL_MESSAGES, INITIAL_USERS, INITIAL_GROUPS } from '../mockData';
 
 const KEYS = {
-  USER: 'facehorizont_user_v3',
-  POSTS: 'facehorizont_posts_v3',
-  MARKETPLACE: 'facehorizont_marketplace_v3',
-  MESSAGES: 'facehorizont_messages_v3',
-  GROUPS: 'facehorizont_groups_v3',
-  ADMIN: 'facehorizont_admin_session_v3',
-  DB_STATUS: 'facehorizont_db_status_v3',
-  REGISTERED_USERS: 'facehorizont_all_users_v3',
+  USER: 'facehorizont_user_v4',
+  POSTS: 'facehorizont_posts_v4',
+  MARKETPLACE: 'facehorizont_marketplace_v4',
+  MESSAGES: 'facehorizont_messages_v4',
+  GROUPS: 'facehorizont_groups_v4',
+  ADMIN: 'facehorizont_admin_session_v4',
+  DB_STATUS: 'facehorizont_db_status_v4',
+  REGISTERED_USERS: 'facehorizont_all_users_v4',
   THEME: 'facehorizont_theme_v3',
-  DISCORD_CONFIG: 'facehorizont_discord_config_v3',
-  SUPABASE_CONFIG: 'facehorizont_supabase_config_v3'
+  DISCORD_CONFIG: 'facehorizont_discord_config_v4',
+  SUPABASE_CONFIG: 'facehorizont_supabase_config_v4',
+  DATA_PURGED: 'facehorizont_clean_slate_v4'
 };
 
 // Check if localStorage is available
@@ -22,6 +23,40 @@ const isStorageAvailable = () => {
   } catch {
     return false;
   }
+};
+
+// Auto-purge all previous mock / legacy data so all users start 100% clean
+if (isStorageAvailable()) {
+  try {
+    if (!localStorage.getItem(KEYS.DATA_PURGED)) {
+      // Clean legacy keys
+      const legacyKeys = [
+        'facehorizont_posts_v1', 'facehorizont_posts_v2', 'facehorizont_posts_v3',
+        'facehorizont_marketplace_v1', 'facehorizont_marketplace_v2', 'facehorizont_marketplace_v3',
+        'facehorizont_messages_v1', 'facehorizont_messages_v2', 'facehorizont_messages_v3',
+        'facehorizont_all_users_v1', 'facehorizont_all_users_v2', 'facehorizont_all_users_v3',
+        'facehorizont_groups_v1', 'facehorizont_groups_v2', 'facehorizont_groups_v3'
+      ];
+      legacyKeys.forEach((k) => localStorage.removeItem(k));
+      localStorage.setItem(KEYS.DATA_PURGED, 'true');
+    }
+  } catch (e) {
+    console.warn('Could not auto-purge legacy keys:', e);
+  }
+}
+
+export const resetAllApplicationData = (): void => {
+  if (!isStorageAvailable()) return;
+  localStorage.removeItem(KEYS.POSTS);
+  localStorage.removeItem(KEYS.MARKETPLACE);
+  localStorage.removeItem(KEYS.MESSAGES);
+  localStorage.removeItem(KEYS.GROUPS);
+  localStorage.removeItem(KEYS.REGISTERED_USERS);
+  localStorage.setItem(KEYS.POSTS, JSON.stringify([]));
+  localStorage.setItem(KEYS.MARKETPLACE, JSON.stringify([]));
+  localStorage.setItem(KEYS.MESSAGES, JSON.stringify([]));
+  localStorage.setItem(KEYS.GROUPS, JSON.stringify([]));
+  localStorage.setItem(KEYS.REGISTERED_USERS, JSON.stringify([]));
 };
 
 export const getStoredUser = (): User | null => {
