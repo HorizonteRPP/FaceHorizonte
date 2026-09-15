@@ -113,19 +113,7 @@
       "createdAt": 1789408505783
     }
   ],
-  "serverMessages": [
-    {
-      "id": "m_1",
-      "senderId": "user_destving",
-      "senderName": "Destving",
-      "senderAvatar": "https://images.unsplash.com/photo-1535713875002-d1d0cf377fde?w=200&h=200&fit=crop&crop=faces",
-      "recipientId": "guest_or_current",
-      "recipientName": "Ciudadano",
-      "text": "¡Hola! Bienvenido a FaceHorizont. Si necesitas ayuda con el servidor de Roleplay, permisos o eventos, no dudes en escribirme por aquí.",
-      "timestamp": 1789434905783,
-      "isRead": false
-    }
-  ],
+  "serverMessages": [],
   "serverUsers": [
     {
       "id": "user_leo",
@@ -361,6 +349,16 @@
     }
   ],
   "serverAuditLogs": [
+    {
+      "id": "log_1789439666509_mehbz",
+      "type": "system",
+      "userName": "Administrador",
+      "userId": "admin",
+      "userAvatar": "",
+      "actionText": "Mensaje privado eliminado por moderación",
+      "details": "De Destving a Ciudadano (ID: m_1)",
+      "timestamp": 1789439666509
+    },
     {
       "id": "log_1789439014674_qg02s",
       "type": "car_deleted",
