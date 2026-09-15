@@ -1,0 +1,404 @@
+{
+  "serverPosts": [
+    {
+      "id": "post_1",
+      "authorId": "user_destving",
+      "authorName": "Destving",
+      "authorAvatar": "https://images.unsplash.com/photo-1535713875002-d1d0cf377fde?w=200&h=200&fit=crop&crop=faces",
+      "content": "🎉 ¡Bienvenidos oficialmente a FaceHorizont! La red social exclusiva de los ciudadanos de Horizonte RP. Ya pueden publicar sus anécdotas, comprar y vender vehículos en el Marketplace y contactar a otros ciudadanos por mensaje privado. ¡Nos vemos en las calles de Roblox!",
+      "imageUrl": "https://images.unsplash.com/photo-1511919884226-fd3cad34687c?w=1000&auto=format&fit=crop&q=80",
+      "timestamp": 1789435805783,
+      "likes": 28,
+      "likedBy": [
+        "user_pepito"
+      ],
+      "reactions": {
+        "heart": 18,
+        "fire": 14,
+        "clap": 8
+      },
+      "tag": "Aviso Oficial RP",
+      "comments": [
+        {
+          "id": "c_1",
+          "postId": "post_1",
+          "authorId": "user_pepito",
+          "authorName": "Pepito",
+          "authorAvatar": "https://images.unsplash.com/photo-1570295999919-56ceb5ecca61?w=200&h=200&fit=crop&crop=faces",
+          "text": "¡Quedó brutal la red social! Ya subí unos autos picantes al Marketplace 🔥",
+          "timestamp": 1789436705783
+        }
+      ]
+    },
+    {
+      "id": "post_2",
+      "authorId": "user_pepito",
+      "authorName": "Pepito",
+      "authorAvatar": "https://images.unsplash.com/photo-1570295999919-56ceb5ecca61?w=200&h=200&fit=crop&crop=faces",
+      "content": "Acabo de traer esta joya importada directa a Horizonte RP: Nissan Skyline GT-R R34 con motor forjado etapa 3 y escape titanio. Lo tengo publicado en el Marketplace, manden mensaje directo si les interesa negociar 🏁",
+      "imageUrl": "https://images.unsplash.com/photo-1617814076367-b759c7d7e738?w=1000&auto=format&fit=crop&q=80",
+      "timestamp": 1789431305783,
+      "likes": 42,
+      "likedBy": [
+        "user_destving"
+      ],
+      "reactions": {
+        "heart": 22,
+        "fire": 31,
+        "clap": 5
+      },
+      "tag": "Venta de Autos",
+      "comments": []
+    }
+  ],
+  "serverCars": [
+    {
+      "id": "car_cross_test_1",
+      "sellerId": "user_dev_cross",
+      "sellerName": "HorizonteRP_Driver",
+      "sellerAvatar": "https://images.unsplash.com/photo-1535713875002-d1d0cf377fde?w=100",
+      "title": "Nissan GT-R R35 Nismo",
+      "price": 620000,
+      "currency": "RP$",
+      "description": "Nissan GT-R preparado para carreras en la autopista de Horizonte RP.",
+      "imageUrl": "https://images.unsplash.com/photo-1617814076367-b759c7d7e738?w=800",
+      "category": "Deportivo",
+      "condition": "Excelente",
+      "location": "Puerto Horizonte",
+      "createdAt": 1700000001000
+    },
+    {
+      "id": "car_1",
+      "sellerId": "user_pepito",
+      "sellerName": "Pepito",
+      "sellerAvatar": "https://images.unsplash.com/photo-1570295999919-56ceb5ecca61?w=200&h=200&fit=crop&crop=faces",
+      "title": "Nissan Skyline GT-R R34 V-Spec II",
+      "price": 145000,
+      "currency": "RP$",
+      "description": "Motor RB26DETT twin-turbo forjado, suspensión regulable Nismo, rines Volk TE37 bronce y pintura Bayside Blue impecable. Sin multas en la comisaría.",
+      "imageUrl": "https://images.unsplash.com/photo-1617814076367-b759c7d7e738?w=800&auto=format&fit=crop&q=80",
+      "category": "Deportivo",
+      "condition": "Modificado RP",
+      "location": "Concesionario Norte - Horizonte RP",
+      "createdAt": 1789427705783
+    },
+    {
+      "id": "car_2",
+      "sellerId": "user_destving",
+      "sellerName": "Destving",
+      "sellerAvatar": "https://images.unsplash.com/photo-1535713875002-d1d0cf377fde?w=200&h=200&fit=crop&crop=faces",
+      "title": "Lamborghini Huracán STO Rosso Corsa",
+      "price": 320000,
+      "currency": "RP$",
+      "description": "Edición de lujo exclusiva de Horizonte RP. Motor V10 atmosférico con sonido brutal, alerón aerodinámico de fibra de carbono. Ideal para eventos de alta sociedad.",
+      "imageUrl": "https://images.unsplash.com/photo-1544829099-b9a0c07fad1a?w=800&auto=format&fit=crop&q=80",
+      "category": "Deportivo",
+      "condition": "Nuevo (0km)",
+      "location": "Distrito Financiero - Horizonte RP",
+      "createdAt": 1789416905783
+    },
+    {
+      "id": "car_3",
+      "sellerId": "user_santi_mecanico",
+      "sellerName": "Santi Mecánico",
+      "sellerAvatar": "https://images.unsplash.com/photo-1500648767791-00dcc994a43e?w=200&h=200&fit=crop&crop=faces",
+      "title": "Toyota Supra MK4 Turbo 1000HP",
+      "price": 160000,
+      "currency": "RP$",
+      "description": "Proyecto de carreras callejeras terminado en Taller Central. Computadora programable, nitro listo, embrague cerámico y llantas semi-slick.",
+      "imageUrl": "https://images.unsplash.com/photo-1605559424843-9e4c228bf1c2?w=800&auto=format&fit=crop&q=80",
+      "category": "Deportivo",
+      "condition": "Modificado RP",
+      "location": "Taller Central - Zona Industrial",
+      "createdAt": 1789408505783
+    }
+  ],
+  "serverMessages": [
+    {
+      "id": "m_1",
+      "senderId": "user_destving",
+      "senderName": "Destving",
+      "senderAvatar": "https://images.unsplash.com/photo-1535713875002-d1d0cf377fde?w=200&h=200&fit=crop&crop=faces",
+      "recipientId": "guest_or_current",
+      "recipientName": "Ciudadano",
+      "text": "¡Hola! Bienvenido a FaceHorizont. Si necesitas ayuda con el servidor de Roleplay, permisos o eventos, no dudes en escribirme por aquí.",
+      "timestamp": 1789434905783,
+      "isRead": false
+    }
+  ],
+  "serverUsers": [
+    {
+      "id": "user_leo",
+      "username": "Leonardo_Admin",
+      "avatar": "https://ui-avatars.com/api/?name=Leonardo_Admin&background=991b1b&color=ffffff",
+      "role": "citizen",
+      "isDiscordUser": false,
+      "discordTag": "Leonardo_Admin",
+      "bio": "Ciudadano de Horizonte RP",
+      "createdAt": 1789439012780,
+      "lastActive": 1789439012780
+    },
+    {
+      "id": "user_dev_cross",
+      "username": "HorizonteRP_Driver",
+      "avatar": "https://images.unsplash.com/photo-1535713875002-d1d0cf377fde?w=100",
+      "role": "citizen",
+      "isDiscordUser": false,
+      "discordTag": "HorizonteRP_Driver",
+      "bio": "Ciudadano de Horizonte RP",
+      "createdAt": 1789438510866,
+      "lastActive": 1789438510866
+    },
+    {
+      "id": "user_destving",
+      "username": "Destving",
+      "avatar": "https://images.unsplash.com/photo-1535713875002-d1d0cf377fde?w=200&h=200&fit=crop&crop=faces",
+      "role": "admin",
+      "isDiscordUser": true,
+      "discordTag": "Destving#0001",
+      "bio": "Fundador y Director de Horizonte RP.",
+      "createdAt": 1786846505783,
+      "lastActive": 1789438205783
+    },
+    {
+      "id": "user_pepito",
+      "username": "Pepito",
+      "avatar": "https://images.unsplash.com/photo-1570295999919-56ceb5ecca61?w=200&h=200&fit=crop&crop=faces",
+      "role": "citizen",
+      "isDiscordUser": true,
+      "discordTag": "PepitoRP#1234",
+      "bio": "Vendedor de autos deportivos importados en Horizonte RP.",
+      "createdAt": 1788142505783,
+      "lastActive": 1789437785783
+    }
+  ],
+  "serverGroups": [
+    {
+      "id": "group_hpd",
+      "name": "Policía HPD - Departamento Central",
+      "description": "Comunidad oficial del Horizonte Police Department. Reportes de patrullas, comunicados oficiales, avisos a la ciudadanía y coordinación de operativos.",
+      "category": "Policía HPD & Seguridad",
+      "privacy": "public",
+      "coverUrl": "https://images.unsplash.com/photo-1589829545856-d10d557cf95f?w=1200&auto=format&fit=crop&q=80",
+      "iconUrl": "https://images.unsplash.com/photo-1507003211169-0a1dd7228f2d?w=200&h=200&fit=crop&crop=faces",
+      "createdBy": "user_oficial_ramos",
+      "creatorName": "Oficial Ramos",
+      "createdAt": 1788574505783,
+      "members": [
+        {
+          "userId": "user_oficial_ramos",
+          "username": "Oficial Ramos",
+          "avatar": "https://images.unsplash.com/photo-1507003211169-0a1dd7228f2d?w=200&h=200&fit=crop&crop=faces",
+          "role": "owner",
+          "joinedAt": 1788574505783,
+          "canPost": true,
+          "canChat": true
+        },
+        {
+          "userId": "user_destving",
+          "username": "Destving",
+          "avatar": "https://images.unsplash.com/photo-1535713875002-d1d0cf377fde?w=200&h=200&fit=crop&crop=faces",
+          "role": "admin",
+          "joinedAt": 1788747305783,
+          "canPost": true,
+          "canChat": true
+        },
+        {
+          "userId": "user_pepito",
+          "username": "Pepito",
+          "avatar": "https://images.unsplash.com/photo-1570295999919-56ceb5ecca61?w=200&h=200&fit=crop&crop=faces",
+          "role": "member",
+          "joinedAt": 1789092905783,
+          "canPost": true,
+          "canChat": true
+        }
+      ],
+      "posts": [
+        {
+          "id": "gp_1",
+          "groupId": "group_hpd",
+          "authorId": "user_oficial_ramos",
+          "authorName": "Oficial Ramos",
+          "authorAvatar": "https://images.unsplash.com/photo-1507003211169-0a1dd7228f2d?w=200&h=200&fit=crop&crop=faces",
+          "content": "🚨 Recordatorio a toda la fuerza de oficiales de Horizonte: Los patrullajes nocturnos por la zona sur deben realizarse en binomios obligatorios. Respeten los protocolos de persecución.",
+          "imageUrl": "https://images.unsplash.com/photo-1589829545856-d10d557cf95f?w=1000&auto=format&fit=crop&q=80",
+          "timestamp": 1789427705783,
+          "likes": 14,
+          "likedBy": [
+            "user_destving"
+          ],
+          "reactions": {
+            "heart": 8,
+            "fire": 3,
+            "clap": 3
+          },
+          "comments": [
+            {
+              "id": "gpc_1",
+              "postId": "gp_1",
+              "authorId": "user_destving",
+              "authorName": "Destving",
+              "authorAvatar": "https://images.unsplash.com/photo-1535713875002-d1d0cf377fde?w=200&h=200&fit=crop&crop=faces",
+              "text": "Excelente coordinación oficial. El centro de control SOS está monitoreando la actividad.",
+              "timestamp": 1789431305783
+            }
+          ]
+        }
+      ],
+      "messages": [
+        {
+          "id": "gm_1",
+          "groupId": "group_hpd",
+          "senderId": "user_oficial_ramos",
+          "senderName": "Oficial Ramos",
+          "senderAvatar": "https://images.unsplash.com/photo-1507003211169-0a1dd7228f2d?w=200&h=200&fit=crop&crop=faces",
+          "senderRole": "owner",
+          "text": "Oficiales en servicio, reporten posición en frecuencia de radio RP.",
+          "timestamp": 1789435805783
+        },
+        {
+          "id": "gm_2",
+          "groupId": "group_hpd",
+          "senderId": "user_destving",
+          "senderName": "Destving",
+          "senderAvatar": "https://images.unsplash.com/photo-1535713875002-d1d0cf377fde?w=200&h=200&fit=crop&crop=faces",
+          "senderRole": "admin",
+          "text": "Comisaría Central despejada y cámaras del servidor sincronizadas.",
+          "timestamp": 1789437305783
+        }
+      ]
+    },
+    {
+      "id": "group_mechanics",
+      "name": "Taller Central & Tuning Club",
+      "description": "Espacio para apasionados de las tuercas, carreras clandestinas, reprogramación de computadoras y personalización de deportivos en Roblox Horizonte RP.",
+      "category": "Mecánicos & Carreras",
+      "privacy": "public",
+      "coverUrl": "https://images.unsplash.com/photo-1617814076367-b759c7d7e738?w=1200&auto=format&fit=crop&q=80",
+      "iconUrl": "https://images.unsplash.com/photo-1500648767791-00dcc994a43e?w=200&h=200&fit=crop&crop=faces",
+      "createdBy": "user_santi_mecanico",
+      "creatorName": "Santi Mecánico",
+      "createdAt": 1788142505783,
+      "members": [
+        {
+          "userId": "user_santi_mecanico",
+          "username": "Santi Mecánico",
+          "avatar": "https://images.unsplash.com/photo-1500648767791-00dcc994a43e?w=200&h=200&fit=crop&crop=faces",
+          "role": "owner",
+          "joinedAt": 1788142505783,
+          "canPost": true,
+          "canChat": true
+        },
+        {
+          "userId": "user_pepito",
+          "username": "Pepito",
+          "avatar": "https://images.unsplash.com/photo-1570295999919-56ceb5ecca61?w=200&h=200&fit=crop&crop=faces",
+          "role": "moderator",
+          "joinedAt": 1788401705783,
+          "canPost": true,
+          "canChat": true
+        }
+      ],
+      "posts": [
+        {
+          "id": "gp_2",
+          "groupId": "group_mechanics",
+          "authorId": "user_santi_mecanico",
+          "authorName": "Santi Mecánico",
+          "authorAvatar": "https://images.unsplash.com/photo-1500648767791-00dcc994a43e?w=200&h=200&fit=crop&crop=faces",
+          "content": "🔧 Lote nuevo de turbocompresores Garret y suspensiones neumáticas importadas al taller. Traigan sus proyectos esta tarde para testearlos en el banco de pruebas de rol.",
+          "imageUrl": "https://images.unsplash.com/photo-1605559424843-9e4c228bf1c2?w=1000&auto=format&fit=crop&q=80",
+          "timestamp": 1789424105783,
+          "likes": 21,
+          "likedBy": [
+            "user_pepito"
+          ],
+          "reactions": {
+            "heart": 11,
+            "fire": 9,
+            "clap": 1
+          },
+          "comments": []
+        }
+      ],
+      "messages": [
+        {
+          "id": "gm_3",
+          "groupId": "group_mechanics",
+          "senderId": "user_pepito",
+          "senderName": "Pepito",
+          "senderAvatar": "https://images.unsplash.com/photo-1570295999919-56ceb5ecca61?w=200&h=200&fit=crop&crop=faces",
+          "senderRole": "moderator",
+          "text": "¿A qué hora abres el taller hoy Santi? Tengo que revisar la transmisión del Skyline.",
+          "timestamp": 1789436405783
+        }
+      ]
+    },
+    {
+      "id": "group_syndicate",
+      "name": "Syndicate RP - Crew Callejero",
+      "description": "La hermandad callejera más activa de Horizonte. Negocios discretos, rutas nocturnas y lealtad entre miembros.",
+      "category": "Crews & Facciones",
+      "privacy": "private",
+      "coverUrl": "https://images.unsplash.com/photo-1544829099-b9a0c07fad1a?w=1200&auto=format&fit=crop&q=80",
+      "iconUrl": "https://images.unsplash.com/photo-1534528741775-53994a69daeb?w=200&h=200&fit=crop&crop=faces",
+      "createdBy": "user_pepito",
+      "creatorName": "Pepito",
+      "createdAt": 1788833705783,
+      "members": [
+        {
+          "userId": "user_pepito",
+          "username": "Pepito",
+          "avatar": "https://images.unsplash.com/photo-1570295999919-56ceb5ecca61?w=200&h=200&fit=crop&crop=faces",
+          "role": "owner",
+          "joinedAt": 1788833705783,
+          "canPost": true,
+          "canChat": true
+        }
+      ],
+      "posts": [],
+      "messages": []
+    }
+  ],
+  "serverAuditLogs": [
+    {
+      "id": "log_1789439014674_qg02s",
+      "type": "car_deleted",
+      "userName": "Administrador",
+      "userId": "user_leo",
+      "userAvatar": "",
+      "actionText": "Vehículo retirado de venta",
+      "details": "Toyota Supra MK4 Turbo (ID: test_sync_argentina)",
+      "timestamp": 1789439014674
+    },
+    {
+      "id": "log_1789439012797_x16ps",
+      "type": "car_created",
+      "userName": "Leonardo_Admin",
+      "userId": "user_leo",
+      "userAvatar": "",
+      "actionText": "Vehículo publicado en Marketplace",
+      "details": "Toyota Supra MK4 Turbo por RP$ 85,000",
+      "timestamp": 1789439012797
+    },
+    {
+      "id": "log_1789438510883_979lv",
+      "type": "car_created",
+      "userName": "HorizonteRP_Driver",
+      "userId": "user_dev_cross",
+      "userAvatar": "https://images.unsplash.com/photo-1535713875002-d1d0cf377fde?w=100",
+      "actionText": "Vehículo publicado en Marketplace",
+      "details": "Nissan GT-R R35 Nismo por RP$ 620,000",
+      "timestamp": 1789438510883
+    },
+    {
+      "id": "log_init",
+      "type": "system",
+      "actionText": "Servidor Horizonte RP en línea",
+      "userName": "Sistema",
+      "userId": "system",
+      "details": "Servidor y sincronización multidispositivo en tiempo real activos.",
+      "timestamp": 1789437605783
+    }
+  ]
+}

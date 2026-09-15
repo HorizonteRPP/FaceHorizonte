@@ -1,6 +1,50 @@
 import express from "express";
 import path from "path";
+import fs from "fs";
 import { createServer as createViteServer } from "vite";
+
+const DB_DIR = path.join(process.cwd(), "data");
+const DB_FILE = path.join(DB_DIR, "server_db.json");
+
+function saveDbToDisk() {
+  try {
+    if (!fs.existsSync(DB_DIR)) {
+      fs.mkdirSync(DB_DIR, { recursive: true });
+    }
+    const payload = {
+      serverPosts,
+      serverCars,
+      serverMessages,
+      serverUsers,
+      serverGroups,
+      serverAuditLogs
+    };
+    fs.writeFileSync(DB_FILE, JSON.stringify(payload, null, 2), "utf-8");
+  } catch (err) {
+    console.error("[DB PERSISTENCE] Error saving to disk:", err);
+  }
+}
+
+function loadDbFromDisk() {
+  try {
+    if (fs.existsSync(DB_FILE)) {
+      const raw = fs.readFileSync(DB_FILE, "utf-8");
+      const data = JSON.parse(raw);
+      if (Array.isArray(data.serverPosts) && data.serverPosts.length > 0) serverPosts = data.serverPosts;
+      if (Array.isArray(data.serverCars) && data.serverCars.length > 0) serverCars = data.serverCars;
+      if (Array.isArray(data.serverMessages) && data.serverMessages.length > 0) serverMessages = data.serverMessages;
+      if (Array.isArray(data.serverUsers) && data.serverUsers.length > 0) serverUsers = data.serverUsers;
+      if (Array.isArray(data.serverGroups) && data.serverGroups.length > 0) serverGroups = data.serverGroups;
+      if (Array.isArray(data.serverAuditLogs) && data.serverAuditLogs.length > 0) serverAuditLogs = data.serverAuditLogs;
+      console.log(`[DB PERSISTENCE] State loaded: ${serverCars.length} autos, ${serverPosts.length} posts, ${serverMessages.length} chats.`);
+    } else {
+      // First boot: create file
+      saveDbToDisk();
+    }
+  } catch (err) {
+    console.warn("[DB PERSISTENCE] Using default state, error reading cache:", err);
+  }
+}
 
 interface PostItem {
   id: string;
@@ -222,6 +266,121 @@ interface GroupItem {
   messages: GroupMessageItem[];
 }
 
+interface UserItem {
+  id: string;
+  username: string;
+  avatar: string;
+  role: string;
+  isDiscordUser?: boolean;
+  discordTag?: string;
+  bio?: string;
+  createdAt: number;
+  lastActive?: number;
+}
+
+interface AuditLogItem {
+  id: string;
+  type: 'post_created' | 'post_deleted' | 'car_created' | 'car_deleted' | 'message_sent' | 'reaction' | 'comment' | 'user_login' | 'group_created' | 'system';
+  actionText: string;
+  userName: string;
+  userId: string;
+  userAvatar?: string;
+  details: string;
+  timestamp: number;
+}
+
+let serverUsers: UserItem[] = [
+  {
+    id: 'user_destving',
+    username: 'Destving',
+    avatar: 'https://images.unsplash.com/photo-1535713875002-d1d0cf377fde?w=200&h=200&fit=crop&crop=faces',
+    role: 'admin',
+    isDiscordUser: true,
+    discordTag: 'Destving#0001',
+    bio: 'Fundador y Director de Horizonte RP.',
+    createdAt: Date.now() - 86400000 * 30,
+    lastActive: Date.now() - 1000 * 60 * 5
+  },
+  {
+    id: 'user_pepito',
+    username: 'Pepito',
+    avatar: 'https://images.unsplash.com/photo-1570295999919-56ceb5ecca61?w=200&h=200&fit=crop&crop=faces',
+    role: 'citizen',
+    isDiscordUser: true,
+    discordTag: 'PepitoRP#1234',
+    bio: 'Vendedor de autos deportivos importados en Horizonte RP.',
+    createdAt: Date.now() - 86400000 * 15,
+    lastActive: Date.now() - 1000 * 60 * 12
+  }
+];
+
+let serverAuditLogs: AuditLogItem[] = [
+  {
+    id: 'log_init',
+    type: 'system',
+    actionText: 'Servidor Horizonte RP en línea',
+    userName: 'Sistema',
+    userId: 'system',
+    details: 'Servidor y sincronización multidispositivo en tiempo real activos.',
+    timestamp: Date.now() - 1000 * 60 * 15
+  }
+];
+
+function addAuditLog(
+  type: AuditLogItem['type'],
+  userName: string,
+  userId: string,
+  actionText: string,
+  details: string,
+  userAvatar?: string
+) {
+  const log: AuditLogItem = {
+    id: `log_${Date.now()}_${Math.random().toString(36).substring(2, 7)}`,
+    type,
+    userName: userName || 'Usuario',
+    userId: userId || 'unknown',
+    userAvatar: userAvatar || '',
+    actionText,
+    details,
+    timestamp: Date.now()
+  };
+  serverAuditLogs.unshift(log);
+  if (serverAuditLogs.length > 500) {
+    serverAuditLogs = serverAuditLogs.slice(0, 500);
+  }
+  saveDbToDisk();
+}
+
+function upsertServerUser(userData: Partial<UserItem> & { id: string; username: string }) {
+  const existing = serverUsers.find((u) => u.id === userData.id);
+  const now = Date.now();
+  if (existing) {
+    existing.username = userData.username || existing.username;
+    if (userData.avatar) existing.avatar = userData.avatar;
+    if (userData.role) existing.role = userData.role;
+    if (userData.discordTag) existing.discordTag = userData.discordTag;
+    if (userData.isDiscordUser !== undefined) existing.isDiscordUser = userData.isDiscordUser;
+    existing.lastActive = now;
+    saveDbToDisk();
+    return existing;
+  } else {
+    const newUser: UserItem = {
+      id: userData.id,
+      username: userData.username,
+      avatar: userData.avatar || `https://ui-avatars.com/api/?name=${encodeURIComponent(userData.username)}&background=991b1b&color=ffffff`,
+      role: userData.role || 'citizen',
+      isDiscordUser: !!userData.isDiscordUser,
+      discordTag: userData.discordTag || userData.username,
+      bio: userData.bio || 'Ciudadano de Horizonte RP',
+      createdAt: userData.createdAt || now,
+      lastActive: now
+    };
+    serverUsers.unshift(newUser);
+    saveDbToDisk();
+    return newUser;
+  }
+}
+
 let serverGroups: GroupItem[] = [
   {
     id: 'group_hpd',
@@ -403,10 +562,23 @@ let supabaseConnected = true;
 let mongodbConnected = true;
 
 async function startServer() {
+  loadDbFromDisk();
   const app = express();
   const PORT = 3000;
 
   app.use(express.json({ limit: "20mb" }));
+  app.use(express.urlencoded({ extended: true, limit: "20mb" }));
+
+  // CORS middleware for cross-device, external browser, and PWA compatibility
+  app.use((req, res, next) => {
+    res.header("Access-Control-Allow-Origin", "*");
+    res.header("Access-Control-Allow-Methods", "GET, POST, PUT, DELETE, PATCH, OPTIONS");
+    res.header("Access-Control-Allow-Headers", "Origin, X-Requested-With, Content-Type, Accept, Authorization");
+    if (req.method === "OPTIONS") {
+      return res.sendStatus(200);
+    }
+    next();
+  });
 
   // API Routes
   app.get("/api/health", (_req, res) => {
@@ -465,6 +637,7 @@ async function startServer() {
   app.post("/api/admin/sos-reset", (_req, res) => {
     serverPosts = serverPosts.slice(0, 2);
     serverCars = serverCars.slice(0, 3);
+    saveDbToDisk();
     res.json({ success: true, message: "Base de datos restablecida a valores iniciales de Horizonte RP." });
   });
 
@@ -479,6 +652,22 @@ async function startServer() {
       return res.status(400).json({ error: "Contenido requerido" });
     }
     serverPosts.unshift(newPost);
+    if (newPost.authorId && newPost.authorName) {
+      upsertServerUser({
+        id: newPost.authorId,
+        username: newPost.authorName,
+        avatar: newPost.authorAvatar
+      });
+    }
+    addAuditLog(
+      'post_created',
+      newPost.authorName,
+      newPost.authorId,
+      'Publicación creada en el Muro',
+      `"${newPost.content.substring(0, 60)}${newPost.content.length > 60 ? '...' : ''}"`,
+      newPost.authorAvatar
+    );
+    saveDbToDisk();
     res.status(201).json(newPost);
   });
 
@@ -494,7 +683,16 @@ async function startServer() {
     if (post.authorId !== userId && !isAdmin) {
       return res.status(403).json({ error: "No tienes permiso para eliminar esta publicación." });
     }
-    serverPosts.splice(postIndex, 1);
+    const deleted = serverPosts.splice(postIndex, 1)[0];
+    addAuditLog(
+      'post_deleted',
+      isAdmin ? 'Administrador' : post.authorName,
+      userId || post.authorId,
+      'Publicación eliminada',
+      `ID: ${id} - "${deleted.content.substring(0, 40)}..."`,
+      post.authorAvatar
+    );
+    saveDbToDisk();
     res.json({ success: true, id });
   });
 
@@ -510,6 +708,7 @@ async function startServer() {
       if (type === "fire") post.reactions.fire += 1;
       else if (type === "clap") post.reactions.clap += 1;
       else post.reactions.heart += 1;
+      addAuditLog('reaction', 'Usuario', userId, 'Reacción añadida', `Reaccionó con ${type || 'me gusta'} a post de ${post.authorName}`);
     } else {
       post.likedBy = post.likedBy.filter((u) => u !== userId);
       post.likes = Math.max(0, post.likes - 1);
@@ -517,6 +716,7 @@ async function startServer() {
       else if (type === "clap") post.reactions.clap = Math.max(0, post.reactions.clap - 1);
       else post.reactions.heart = Math.max(0, post.reactions.heart - 1);
     }
+    saveDbToDisk();
     res.json(post);
   });
 
@@ -527,6 +727,22 @@ async function startServer() {
     if (!post) return res.status(404).json({ error: "Publicación no encontrada" });
 
     post.comments.push(comment);
+    if (comment.authorId && comment.authorName) {
+      upsertServerUser({
+        id: comment.authorId,
+        username: comment.authorName,
+        avatar: comment.authorAvatar
+      });
+    }
+    addAuditLog(
+      'comment',
+      comment.authorName,
+      comment.authorId,
+      `Comentario en post de ${post.authorName}`,
+      `"${comment.text?.substring(0, 50)}"`,
+      comment.authorAvatar
+    );
+    saveDbToDisk();
     res.json(post);
   });
 
@@ -541,6 +757,22 @@ async function startServer() {
       return res.status(400).json({ error: "Datos del auto incompletos" });
     }
     serverCars.unshift(newCar);
+    if (newCar.sellerId && newCar.sellerName) {
+      upsertServerUser({
+        id: newCar.sellerId,
+        username: newCar.sellerName,
+        avatar: newCar.sellerAvatar
+      });
+    }
+    addAuditLog(
+      'car_created',
+      newCar.sellerName,
+      newCar.sellerId,
+      'Vehículo publicado en Marketplace',
+      `${newCar.title} por ${newCar.currency || 'RP$'} ${newCar.price.toLocaleString()}`,
+      newCar.sellerAvatar
+    );
+    saveDbToDisk();
     res.status(201).json(newCar);
   });
 
@@ -556,11 +788,20 @@ async function startServer() {
     if (car.sellerId !== sellerId && !isAdmin) {
       return res.status(403).json({ error: "No tienes permiso para eliminar este vehículo." });
     }
-    serverCars.splice(carIndex, 1);
+    const removed = serverCars.splice(carIndex, 1)[0];
+    addAuditLog(
+      'car_deleted',
+      isAdmin ? 'Administrador' : car.sellerName,
+      sellerId || car.sellerId,
+      'Vehículo retirado de venta',
+      `${removed.title} (ID: ${id})`,
+      car.sellerAvatar
+    );
+    saveDbToDisk();
     res.json({ success: true, id });
   });
 
-  // Messages endpoints
+  // Messages endpoints (Individual 1-on-1 private messaging)
   app.get("/api/messages", (req, res) => {
     const { userId } = req.query;
     if (!userId) {
@@ -578,7 +819,117 @@ async function startServer() {
       return res.status(400).json({ error: "Mensaje vacío" });
     }
     serverMessages.push(newMsg);
+
+    // Register sender and recipient
+    if (newMsg.senderId && newMsg.senderName) {
+      upsertServerUser({
+        id: newMsg.senderId,
+        username: newMsg.senderName,
+        avatar: newMsg.senderAvatar
+      });
+    }
+    if (newMsg.recipientId && newMsg.recipientName && newMsg.recipientId !== 'guest_or_current') {
+      upsertServerUser({
+        id: newMsg.recipientId,
+        username: newMsg.recipientName
+      });
+    }
+
+    addAuditLog(
+      'message_sent',
+      newMsg.senderName,
+      newMsg.senderId,
+      `Mensaje privado enviado a ${newMsg.recipientName}`,
+      `"${newMsg.text.substring(0, 60)}${newMsg.text.length > 60 ? '...' : ''}"${newMsg.carContext ? ` [Sobre: ${newMsg.carContext.title}]` : ''}`,
+      newMsg.senderAvatar
+    );
+
+    saveDbToDisk();
     res.status(201).json(newMsg);
+  });
+
+  app.delete("/api/messages/:id", (req, res) => {
+    const { id } = req.params;
+    const idx = serverMessages.findIndex((m) => m.id === id);
+    if (idx !== -1) {
+      const removed = serverMessages.splice(idx, 1)[0];
+      addAuditLog(
+        'system',
+        'Administrador',
+        'admin',
+        'Mensaje privado eliminado por moderación',
+        `De ${removed.senderName} a ${removed.recipientName} (ID: ${id})`
+      );
+      saveDbToDisk();
+      return res.json({ success: true, id });
+    }
+    res.status(404).json({ error: "Mensaje no encontrado" });
+  });
+
+  // Users Management & Activity Stats API
+  app.get("/api/users", (_req, res) => {
+    const usersWithStats = serverUsers.map((user) => {
+      const postsCount = serverPosts.filter((p) => p.authorId === user.id).length;
+      const carsCount = serverCars.filter((c) => c.sellerId === user.id).length;
+      const messagesSentCount = serverMessages.filter((m) => m.senderId === user.id).length;
+      const commentsCount = serverPosts.reduce((acc, p) => {
+        return acc + (p.comments?.filter((c) => c.authorId === user.id).length || 0);
+      }, 0);
+
+      return {
+        ...user,
+        postsCount,
+        carsCount,
+        messagesSentCount,
+        commentsCount,
+        lastActive: user.lastActive || user.createdAt
+      };
+    });
+    res.json(usersWithStats);
+  });
+
+  app.post("/api/users", (req, res) => {
+    const user = req.body;
+    if (!user || !user.id || !user.username) {
+      return res.status(400).json({ error: "Datos de usuario requeridos" });
+    }
+    const saved = upsertServerUser(user);
+    res.json(saved);
+  });
+
+  app.delete("/api/users/:id", (req, res) => {
+    const { id } = req.params;
+    const idx = serverUsers.findIndex((u) => u.id === id);
+    if (idx !== -1) {
+      const removed = serverUsers.splice(idx, 1)[0];
+      addAuditLog('system', 'Administrador', 'admin', 'Usuario expulsado/eliminado', `Usuario ${removed.username} (${removed.id})`);
+      return res.json({ success: true, id });
+    }
+    res.status(404).json({ error: "Usuario no encontrado" });
+  });
+
+  // Audit Logs API (Public community activity with exact timestamps, strictly omitting passwords & secrets)
+  app.get("/api/logs", (_req, res) => {
+    res.json(serverAuditLogs);
+  });
+
+  // Supabase Configuration Sync API
+  let serverSupabaseUrl = '';
+  let serverSupabaseKey = '';
+
+  app.get("/api/admin/config/supabase", (_req, res) => {
+    res.json({
+      projectUrl: serverSupabaseUrl,
+      hasKey: !!serverSupabaseKey
+    });
+  });
+
+  app.post("/api/admin/config/supabase", (req, res) => {
+    const { projectUrl, anonKey } = req.body || {};
+    if (projectUrl) serverSupabaseUrl = projectUrl.trim();
+    if (anonKey) serverSupabaseKey = anonKey.trim();
+    addAuditLog('system', 'Administrador', 'admin', 'Conexión a Supabase configurada', `URL de proyecto vinculada: ${serverSupabaseUrl.substring(0, 30)}...`);
+    res.json({ success: true, projectUrl: serverSupabaseUrl, hasKey: !!serverSupabaseKey });
   });
 
   // Groups Endpoints
@@ -592,6 +943,7 @@ async function startServer() {
       return res.status(400).json({ error: "Nombre de grupo requerido" });
     }
     serverGroups.unshift(newGroup);
+    saveDbToDisk();
     res.status(201).json(newGroup);
   });
 
@@ -618,6 +970,7 @@ async function startServer() {
         canPost: true,
         canChat: true
       });
+      saveDbToDisk();
     }
     res.json(group);
   });
@@ -627,6 +980,7 @@ async function startServer() {
     if (!group) return res.status(404).json({ error: "Grupo no encontrado" });
     const { userId } = req.body;
     group.members = group.members.filter((m) => m.userId !== userId);
+    saveDbToDisk();
     res.json(group);
   });
 
@@ -644,6 +998,7 @@ async function startServer() {
 
     if (!group.posts) group.posts = [];
     group.posts.unshift(post);
+    saveDbToDisk();
     res.status(201).json(post);
   });
 
@@ -667,6 +1022,7 @@ async function startServer() {
       else if (type === "clap") post.reactions.clap = Math.max(0, post.reactions.clap - 1);
       else post.reactions.heart = Math.max(0, post.reactions.heart - 1);
     }
+    saveDbToDisk();
     res.json(post);
   });
 
@@ -679,6 +1035,7 @@ async function startServer() {
     const comment = req.body;
     if (!post.comments) post.comments = [];
     post.comments.push(comment);
+    saveDbToDisk();
     res.json(post);
   });
 
@@ -696,6 +1053,7 @@ async function startServer() {
 
     if (!group.messages) group.messages = [];
     group.messages.push(msg);
+    saveDbToDisk();
     res.status(201).json(msg);
   });
 
@@ -708,6 +1066,7 @@ async function startServer() {
 
     if (removeMember) {
       group.members = group.members.filter((m) => m.userId !== targetUserId);
+      saveDbToDisk();
       return res.json({ success: true, message: "Miembro expulsado del grupo", group });
     }
 
@@ -718,6 +1077,7 @@ async function startServer() {
     if (typeof canChat === 'boolean') member.canChat = canChat;
     if (role) member.role = role;
 
+    saveDbToDisk();
     res.json({ success: true, member, group });
   });
 
@@ -725,18 +1085,28 @@ async function startServer() {
   app.post("/api/auth/discord-verify", async (req, res) => {
     const { token, profile } = req.body || {};
     if (profile) {
+      const user = {
+        id: profile.id ? `discord_${profile.id}` : `user_${Date.now()}`,
+        username: profile.username || "RobloxPlayer",
+        avatar: profile.avatarUrl || "https://images.unsplash.com/photo-1534528741775-53994a69daeb?w=200&h=200&fit=crop",
+        role: "citizen",
+        isDiscordUser: true,
+        discordTag: profile.discriminator ? `${profile.username}#${profile.discriminator}` : profile.username,
+        bio: `Cuenta oficial verificada en Discord de Horizonte RP.`,
+        createdAt: Date.now()
+      };
+      upsertServerUser(user);
+      addAuditLog(
+        'user_login',
+        user.username,
+        user.id,
+        'Inicio de sesión exitoso con Discord',
+        `Discord Tag: ${user.discordTag}`,
+        user.avatar
+      );
       return res.json({
         success: true,
-        user: {
-          id: profile.id ? `discord_${profile.id}` : `user_${Date.now()}`,
-          username: profile.username || "RobloxPlayer",
-          avatar: profile.avatarUrl || "https://images.unsplash.com/photo-1534528741775-53994a69daeb?w=200&h=200&fit=crop",
-          role: "citizen",
-          isDiscordUser: true,
-          discordTag: profile.discriminator ? `${profile.username}#${profile.discriminator}` : profile.username,
-          bio: `Cuenta oficial verificada en Discord de Horizonte RP.`,
-          createdAt: Date.now()
-        }
+        user
       });
     }
     return res.status(400).json({ error: "Datos de perfil no provistos" });

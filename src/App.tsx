@@ -12,8 +12,22 @@ import {
   GroupMember,
   ThemeMode,
   DiscordApiConfig,
-  SupabaseApiConfig
+  SupabaseApiConfig,
+  ServerAuditLog
 } from './types';
+import { 
+  syncMessagesWithSupabase, 
+  syncPostsWithSupabase,
+  syncCarsWithSupabase
+} from './services/supabaseSync';
+import { 
+  Home, 
+  Store, 
+  Users, 
+  MessageSquare, 
+  Shield, 
+  RefreshCw 
+} from 'lucide-react';
 import { 
   getStoredUser, 
   saveStoredUser, 
@@ -77,6 +91,9 @@ export default function App() {
   const [adminSession, setAdminSession] = useState<AdminSession>(() => getAdminSession());
   const [dbHealth, setDbHealth] = useState<DatabaseHealth>(() => getDatabaseHealth());
 
+  // Real-time community audit logs
+  const [auditLogs, setAuditLogs] = useState<ServerAuditLog[]>([]);
+
   // Modals Visibility
   const [adminModalOpen, setAdminModalOpen] = useState(false);
   const [sosModalOpen, setSosModalOpen] = useState(false);
@@ -90,6 +107,7 @@ export default function App() {
 
   // Toast notifications
   const [toastMessage, setToastMessage] = useState<string | null>(null);
+  const [isSyncing, setIsSyncing] = useState(false);
 
   const showToast = (msg: string) => {
     setToastMessage(msg);
@@ -242,36 +260,147 @@ export default function App() {
     window.location.href = discordAuthUrl;
   };
 
-  // Sync with server API if reachable
-  useEffect(() => {
-    const syncWithServer = async () => {
-      try {
-        const resHealth = await fetch('/api/health');
-        if (resHealth.ok) {
-          const healthData = await resHealth.json();
-          setDbHealth((prev) => ({
-            ...prev,
-            serverOnline: true,
-            supabaseConnected: healthData.supabaseConnected ?? prev.supabaseConnected,
-            mongodbConnected: healthData.mongodbConnected ?? prev.mongodbConnected,
-            pingMs: healthData.pingMs ?? prev.pingMs
-          }));
-        }
+  // Real-time synchronization engine with Server API and Supabase (for PC and Mobile devices)
+  const syncWithServerAndSupabase = async () => {
+    setIsSyncing(true);
+    try {
+      // 1. Health check & Server Status
+      const resHealth = await fetch('/api/health');
+      if (resHealth.ok) {
+        const healthData = await resHealth.json();
+        setDbHealth((prev) => ({
+          ...prev,
+          serverOnline: true,
+          supabaseConnected: healthData.supabaseConnected ?? prev.supabaseConnected,
+          mongodbConnected: healthData.mongodbConnected ?? prev.mongodbConnected,
+          pingMs: healthData.pingMs ?? prev.pingMs
+        }));
+      }
 
-        const resPosts = await fetch('/api/posts');
-        if (resPosts.ok) {
-          const serverPosts = await resPosts.json();
-          if (Array.isArray(serverPosts) && serverPosts.length > 0) {
-            setPosts(serverPosts);
-            savePosts(serverPosts);
-          }
+      // 2. Fetch posts from server
+      const resPosts = await fetch('/api/posts');
+      if (resPosts.ok) {
+        const serverPosts: Post[] = await resPosts.json();
+        if (Array.isArray(serverPosts) && serverPosts.length > 0) {
+          setPosts(serverPosts);
+          savePosts(serverPosts);
         }
-      } catch {
-        // Run locally with localStorage fallback
+      }
+
+      // 3. Fetch marketplace cars from server (Cross-device PC <-> Mobile sync)
+      const resCars = await fetch('/api/marketplace');
+      if (resCars.ok) {
+        const serverCars: MarketplaceCar[] = await resCars.json();
+        if (Array.isArray(serverCars) && serverCars.length > 0) {
+          setCars(serverCars);
+          saveMarketplaceCars(serverCars);
+        }
+      }
+
+      // 4. Fetch private messages from server (Cross-device PC <-> Mobile sync)
+      const resMessages = await fetch('/api/messages');
+      if (resMessages.ok) {
+        const serverMsgs: ChatMessage[] = await resMessages.json();
+        if (Array.isArray(serverMsgs)) {
+          setMessages(serverMsgs);
+          saveMessages(serverMsgs);
+        }
+      }
+
+      // 5. Fetch registered users from server
+      const resUsers = await fetch('/api/users');
+      if (resUsers.ok) {
+        const serverUsersData = await resUsers.json();
+        if (Array.isArray(serverUsersData)) {
+          const formattedUsers: User[] = serverUsersData.map((u: any) => ({
+            id: u.id,
+            username: u.username,
+            avatar: u.avatar,
+            role: u.role || 'citizen',
+            discordTag: u.discordTag,
+            isDiscordUser: u.isDiscordUser,
+            bio: u.bio,
+            createdAt: u.createdAt
+          }));
+          setRegisteredUsers((current) => {
+            const map = new Map<string, User>();
+            formattedUsers.forEach((u) => map.set(u.id, u));
+            current.forEach((u) => {
+              if (!map.has(u.id)) map.set(u.id, u);
+            });
+            const merged = Array.from(map.values());
+            saveRegisteredUsers(merged);
+            return merged;
+          });
+        }
+      }
+
+      // 6. Fetch activity audit logs
+      const resLogs = await fetch('/api/logs');
+      if (resLogs.ok) {
+        const serverLogsData = await resLogs.json();
+        if (Array.isArray(serverLogsData)) {
+          setAuditLogs(serverLogsData);
+        }
+      }
+
+      // 7. Supabase cloud sync if configured
+      if (supabaseConfig?.projectUrl && supabaseConfig?.anonKey) {
+        syncPostsWithSupabase(supabaseConfig, posts).then((supaPosts) => {
+          if (supaPosts && supaPosts.length > 0) {
+            setPosts(supaPosts);
+            savePosts(supaPosts);
+          }
+        }).catch(() => {});
+
+        syncCarsWithSupabase(supabaseConfig, cars).then((supaCars) => {
+          if (supaCars && supaCars.length > 0) {
+            setCars(supaCars);
+            saveMarketplaceCars(supaCars);
+          }
+        }).catch(() => {});
+
+        syncMessagesWithSupabase(supabaseConfig, messages).then((supaMsgs) => {
+          if (supaMsgs && supaMsgs.length > 0) {
+            setMessages(supaMsgs);
+            saveMessages(supaMsgs);
+          }
+        }).catch(() => {});
+      }
+    } catch {
+      // Local fallback
+    } finally {
+      setIsSyncing(false);
+    }
+  };
+
+  // Periodic multi-device polling every 2.5s and on window focus/visibility
+  useEffect(() => {
+    syncWithServerAndSupabase();
+
+    const interval = setInterval(() => {
+      syncWithServerAndSupabase();
+    }, 2500);
+
+    const handleFocus = () => {
+      syncWithServerAndSupabase();
+    };
+
+    const handleVisibilityChange = () => {
+      if (!document.hidden) {
+        syncWithServerAndSupabase();
       }
     };
-    syncWithServer();
-  }, []);
+
+    window.addEventListener('focus', handleFocus);
+    document.addEventListener('visibilitychange', handleVisibilityChange);
+
+    return () => {
+      clearInterval(interval);
+      window.removeEventListener('focus', handleFocus);
+      document.removeEventListener('visibilitychange', handleVisibilityChange);
+    };
+  }, [supabaseConfig]);
 
   // Handlers for Posts
   const handleAddPost = async (content: string, imageUrl?: string, tag?: string) => {
@@ -307,6 +436,10 @@ export default function App() {
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify(newPost)
       });
+      syncWithServerAndSupabase();
+      if (supabaseConfig?.projectUrl && supabaseConfig?.anonKey) {
+        syncPostsWithSupabase(supabaseConfig, updated).catch(() => {});
+      }
     } catch {
       // Saved locally
     }
@@ -322,7 +455,9 @@ export default function App() {
       method: 'DELETE',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({ userId: currentUser?.id, isAdmin: !!adminSession.isAdmin1 || !!adminSession.isAdmin2 })
-    }).catch(() => {});
+    })
+      .then(() => syncWithServerAndSupabase())
+      .catch(() => {});
   };
 
   const handleToggleReaction = (postId: string, type: 'heart' | 'fire' | 'clap') => {
@@ -353,7 +488,9 @@ export default function App() {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({ type, userId: currentUser?.id || 'guest' })
-    }).catch(() => {});
+    })
+      .then(() => syncWithServerAndSupabase())
+      .catch(() => {});
   };
 
   const handleAddComment = (postId: string, text: string) => {
@@ -384,7 +521,9 @@ export default function App() {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify(newComment)
-    }).catch(() => {});
+    })
+      .then(() => syncWithServerAndSupabase())
+      .catch(() => {});
   };
 
   // Handlers for Marketplace
@@ -406,6 +545,7 @@ export default function App() {
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify(newCar)
       });
+      syncWithServerAndSupabase();
     } catch {
       // Saved locally
     }
@@ -421,7 +561,9 @@ export default function App() {
       method: 'DELETE',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({ sellerId: currentUser?.id, isAdmin: !!adminSession.isAdmin1 || !!adminSession.isAdmin2 })
-    }).catch(() => {});
+    })
+      .then(() => syncWithServerAndSupabase())
+      .catch(() => {});
   };
 
   const handleContactSeller = (car: MarketplaceCar) => {
@@ -439,10 +581,7 @@ export default function App() {
     if (!currentUser) return;
 
     const targetUser = registeredUsers.find((u) => u.id === recipientId);
-    const targetName = targetUser ? targetUser.username : 'Vendedor Horizonte RP';
-    const targetAvatar = targetUser
-      ? targetUser.avatar
-      : 'https://images.unsplash.com/photo-1535713875002-d1d0cf377fde?w=200&h=200&fit=crop';
+    const targetName = targetUser ? targetUser.username : 'Ciudadano Horizonte RP';
 
     const newMsg: ChatMessage = {
       id: `msg_${Date.now()}_${Math.random().toString(36).substr(2, 6)}`,
@@ -467,42 +606,37 @@ export default function App() {
     setMessages(updated);
     saveMessages(updated);
 
-    // Auto-respond simulation from recipient after 1.2s
-    setTimeout(() => {
-      const replies = carRef
-        ? [
-            `¡Hola ${currentUser.username}! Sí, el ${carRef.title} aún está disponible por ${carRef.currency} ${carRef.price.toLocaleString()}. ¿Nos vemos en el concesionario de Horizonte RP?`,
-            `Buenas, ¿te interesa permutar o solo compras en efectivo RP$?`
-          ]
-        : [
-            `¡Qué tal ${currentUser.username}! Te leo fuerte y claro en Horizonte RP.`,
-            `Hola, ¿en qué punto de la ciudad te encuentras ahora mismo?`
-          ];
+    // Send immediately to Server API for cross-device synchronization
+    fetch('/api/messages', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(newMsg)
+    })
+      .then(() => syncWithServerAndSupabase())
+      .catch((err) => console.warn('Message sync err:', err));
 
-      const replyMsg: ChatMessage = {
-        id: `msg_reply_${Date.now()}`,
-        senderId: recipientId,
-        senderName: targetName,
-        senderAvatar: targetAvatar,
-        recipientId: currentUser.id,
-        recipientName: currentUser.username,
-        text: replies[Math.floor(Math.random() * replies.length)],
-        timestamp: Date.now(),
-        isRead: false
-      };
-
-      setMessages((prev) => {
-        const next = [...prev, replyMsg];
-        saveMessages(next);
-        return next;
-      });
-    }, 1200);
+    if (supabaseConfig?.projectUrl && supabaseConfig?.anonKey) {
+      syncMessagesWithSupabase(supabaseConfig, updated).catch(() => {});
+    }
   };
 
   const handleSendChatMessage = (msg: ChatMessage) => {
     const updated = [...messages, msg];
     setMessages(updated);
     saveMessages(updated);
+
+    // Send immediately to Server API for cross-device synchronization
+    fetch('/api/messages', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(msg)
+    })
+      .then(() => syncWithServerAndSupabase())
+      .catch((err) => console.warn('Chat message sync err:', err));
+
+    if (supabaseConfig?.projectUrl && supabaseConfig?.anonKey) {
+      syncMessagesWithSupabase(supabaseConfig, updated).catch(() => {});
+    }
   };
 
   const handleOpenMessages = (targetUserId?: string) => {
@@ -785,6 +919,16 @@ export default function App() {
     setSupabaseConfig(newCfg);
     saveStoredSupabaseConfig(newCfg);
     showToast('Configuración de Supabase API guardada.');
+
+    fetch('/api/admin/config/supabase', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        url: newCfg.projectUrl,
+        key: newCfg.anonKey,
+        enabled: newCfg.enabled
+      })
+    }).catch(() => {});
   };
 
   const handleClearTable = (table: 'users' | 'posts' | 'cars' | 'messages' | 'groups') => {
@@ -839,6 +983,10 @@ export default function App() {
     setMessages(updated);
     saveMessages(updated);
     showToast('Mensaje eliminado.');
+
+    fetch(`/api/messages/${msgId}`, {
+      method: 'DELETE'
+    }).catch(() => {});
   };
 
   const handleDeleteUser = (userId: string) => {
@@ -850,6 +998,10 @@ export default function App() {
       clearStoredUser();
     }
     showToast('Usuario eliminado de la base de datos.');
+
+    fetch(`/api/users/${userId}`, {
+      method: 'DELETE'
+    }).catch(() => {});
   };
 
   const handleDeleteGroup = (groupId: string) => {
@@ -865,7 +1017,7 @@ export default function App() {
   ).length;
 
   return (
-    <div className="min-h-screen flex flex-col selection:bg-red-600 selection:text-white transition-colors duration-200">
+    <div className="min-h-screen flex flex-col selection:bg-red-600 selection:text-white transition-colors duration-200 pb-16 md:pb-0">
       
       {/* Toast alert */}
       {toastMessage && (
@@ -920,6 +1072,8 @@ export default function App() {
             onAddCar={handleAddCar}
             onDeleteCar={handleDeleteCar}
             onContactSeller={handleContactSeller}
+            onManualSync={syncWithServerAndSupabase}
+            isSyncing={isSyncing}
           />
         ) : (
           <GroupsView
@@ -977,6 +1131,7 @@ export default function App() {
         cars={cars}
         messages={messages}
         groups={groups}
+        auditLogs={auditLogs}
         dbHealth={dbHealth}
         onToggleSupabase={handleToggleSupabase}
         onToggleMongodb={handleToggleMongodb}
@@ -994,6 +1149,7 @@ export default function App() {
         supabaseConfig={supabaseConfig}
         onSaveSupabaseConfig={handleSaveSupabaseConfig}
         showToast={showToast}
+        onRefreshData={syncWithServerAndSupabase}
       />
 
       {/* SOS Database Modal */}
@@ -1023,6 +1179,105 @@ export default function App() {
         showSosTrigger={adminSession.isAdmin2}
         onOpenSos={() => setSosModalOpen(true)}
       />
+
+      {/* Mobile Bottom Navigation Bar for Smart Devices */}
+      <nav 
+        id="mobile-bottom-nav"
+        className={`md:hidden fixed bottom-0 left-0 right-0 z-40 border-t backdrop-blur-lg px-2 py-1 flex items-center justify-around transition-colors ${
+          theme === 'light'
+            ? 'bg-white/95 border-gray-200 shadow-[0_-4px_20px_rgba(0,0,0,0.08)] text-gray-700'
+            : 'bg-[#121316]/95 border-[#282a32] shadow-[0_-4px_25px_rgba(0,0,0,0.5)] text-gray-300'
+        }`}
+      >
+        <button
+          id="mobile-nav-feed"
+          onClick={() => setCurrentTab('feed')}
+          className={`flex flex-col items-center justify-center flex-1 py-1 text-[10px] font-bold transition-all cursor-pointer ${
+            currentTab === 'feed'
+              ? 'text-red-500 font-extrabold'
+              : 'text-gray-400 hover:text-gray-200'
+          }`}
+        >
+          <Home className="w-5 h-5 mb-0.5" />
+          <span>Inicio</span>
+        </button>
+
+        <button
+          id="mobile-nav-marketplace"
+          onClick={() => setCurrentTab('marketplace')}
+          className={`relative flex flex-col items-center justify-center flex-1 py-1 text-[10px] font-bold transition-all cursor-pointer ${
+            currentTab === 'marketplace'
+              ? 'text-red-500 font-extrabold'
+              : 'text-gray-400 hover:text-gray-200'
+          }`}
+        >
+          <Store className="w-5 h-5 mb-0.5" />
+          <span>Autos</span>
+          {cars.length > 0 && (
+            <span className="absolute top-0 right-3 px-1.5 py-0.2 rounded-full text-[9px] bg-red-600 text-white font-extrabold shadow-sm">
+              {cars.length}
+            </span>
+          )}
+        </button>
+
+        <button
+          id="mobile-nav-groups"
+          onClick={() => setCurrentTab('groups')}
+          className={`flex flex-col items-center justify-center flex-1 py-1 text-[10px] font-bold transition-all cursor-pointer ${
+            currentTab === 'groups'
+              ? 'text-red-500 font-extrabold'
+              : 'text-gray-400 hover:text-gray-200'
+          }`}
+        >
+          <Users className="w-5 h-5 mb-0.5" />
+          <span>Grupos</span>
+        </button>
+
+        <button
+          id="mobile-nav-messages"
+          onClick={() => {
+            if (!currentUser) {
+              handleStartDiscordOAuth();
+            } else {
+              setMessengerOpen(!messengerOpen);
+            }
+          }}
+          className={`relative flex flex-col items-center justify-center flex-1 py-1 text-[10px] font-bold transition-all cursor-pointer ${
+            messengerOpen
+              ? 'text-red-500 font-extrabold'
+              : 'text-gray-400 hover:text-gray-200'
+          }`}
+        >
+          <MessageSquare className="w-5 h-5 mb-0.5" />
+          <span>Mensajes</span>
+          {unreadMessagesCount > 0 && (
+            <span className="absolute top-0 right-3 px-1.5 py-0.2 rounded-full text-[9px] bg-red-600 text-white font-extrabold shadow-sm animate-pulse">
+              {unreadMessagesCount}
+            </span>
+          )}
+        </button>
+
+        {(adminSession.isAdmin1 || adminSession.isAdmin2) ? (
+          <button
+            id="mobile-nav-admin"
+            onClick={() => setAdminModalOpen(true)}
+            className="flex flex-col items-center justify-center flex-1 py-1 text-[10px] font-bold text-amber-400 hover:text-amber-300 transition-all cursor-pointer"
+          >
+            <Shield className="w-5 h-5 mb-0.5" />
+            <span>Admin</span>
+          </button>
+        ) : (
+          <button
+            id="mobile-nav-sync"
+            onClick={syncWithServerAndSupabase}
+            disabled={isSyncing}
+            className="flex flex-col items-center justify-center flex-1 py-1 text-[10px] font-bold text-gray-400 hover:text-gray-200 transition-all cursor-pointer"
+          >
+            <RefreshCw className={`w-5 h-5 mb-0.5 ${isSyncing ? 'animate-spin text-red-500' : ''}`} />
+            <span>Sync</span>
+          </button>
+        )}
+      </nav>
     </div>
   );
 }

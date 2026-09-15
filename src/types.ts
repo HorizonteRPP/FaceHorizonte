@@ -179,6 +179,27 @@ export interface SupabaseApiConfig {
   anonKey: string;
   serviceRoleKey?: string;
   dbMode: 'supabase_only' | 'dual' | 'local';
+  enabled?: boolean;
+}
+
+export interface ServerAuditLog {
+  id: string;
+  type: 'post_created' | 'post_deleted' | 'car_created' | 'car_deleted' | 'message_sent' | 'reaction' | 'comment' | 'user_login' | 'group_created' | 'system';
+  actionText: string;
+  userName: string;
+  userId: string;
+  userAvatar?: string;
+  details: string;
+  timestamp: number;
+}
+
+export interface UserActivityStats {
+  user: User;
+  postsCount: number;
+  commentsCount: number;
+  carsCount: number;
+  messagesSentCount: number;
+  lastActive: number;
 }
 
 

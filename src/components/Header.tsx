@@ -13,7 +13,9 @@ import {
   Sun,
   Moon,
   Settings,
-  Sparkles
+  Sparkles,
+  Share2,
+  Check
 } from 'lucide-react';
 
 interface HeaderProps {
@@ -51,6 +53,16 @@ export const Header: React.FC<HeaderProps> = ({
 }) => {
   const [menuOpen, setMenuOpen] = useState(false);
   const [profileDropdown, setProfileDropdown] = useState(false);
+  const [copiedShare, setCopiedShare] = useState(false);
+
+  const handleShareApp = () => {
+    const url = window.location.href.split('?')[0].split('#')[0];
+    if (navigator.clipboard) {
+      navigator.clipboard.writeText(url);
+    }
+    setCopiedShare(true);
+    setTimeout(() => setCopiedShare(false), 3500);
+  };
 
   const isAdminActive = adminSession.isAdmin1 || adminSession.isAdmin2;
   const isLight = theme === 'light';
@@ -161,6 +173,32 @@ export const Header: React.FC<HeaderProps> = ({
                 <>
                   <Sun className="w-3.5 h-3.5 text-amber-400" />
                   <span className="hidden sm:inline">Modo Blanco</span>
+                </>
+              )}
+            </button>
+
+            {/* Share Public Link Button for other devices / friends */}
+            <button
+              id="header-share-btn"
+              onClick={handleShareApp}
+              className={`relative flex items-center gap-1.5 px-2.5 py-1.5 rounded-xl text-xs font-bold border transition-all cursor-pointer ${
+                copiedShare
+                  ? 'bg-emerald-600 text-white border-emerald-500 shadow-md scale-105'
+                  : isLight
+                  ? 'bg-gray-100 hover:bg-gray-200 border-gray-200 text-gray-700'
+                  : 'bg-[#22242b] hover:bg-[#2c2f38] border-[#363a45] text-gray-300 hover:text-white'
+              }`}
+              title="Compartir enlace público para que amigos en otra casa o celular vean los mismos autos y publicaciones"
+            >
+              {copiedShare ? (
+                <>
+                  <Check className="w-3.5 h-3.5 text-white" />
+                  <span className="hidden sm:inline">¡Enlace Copiado!</span>
+                </>
+              ) : (
+                <>
+                  <Share2 className="w-3.5 h-3.5 text-red-500" />
+                  <span className="hidden sm:inline">Compartir</span>
                 </>
               )}
             </button>

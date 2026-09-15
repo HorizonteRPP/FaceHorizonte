@@ -179,8 +179,10 @@ export const MessengerDrawer: React.FC<MessengerDrawerProps> = ({
     c.name.toLowerCase().includes(searchQuery.toLowerCase())
   );
 
+  if (!isOpen) return null;
+
   return (
-    <div className="fixed bottom-4 right-4 sm:right-6 z-50 w-[94vw] sm:w-[480px] max-w-[520px] bg-[#1e0202] border-2 border-red-800 rounded-2xl shadow-[0_0_40px_rgba(220,38,38,0.4)] overflow-hidden flex flex-col transition-all">
+    <div className="fixed bottom-16 md:bottom-4 left-2 right-2 sm:left-auto sm:right-6 z-50 sm:w-[480px] max-w-[520px] max-h-[85vh] bg-[#1e0202] border-2 border-red-800 rounded-2xl shadow-[0_0_40px_rgba(220,38,38,0.4)] overflow-hidden flex flex-col transition-all">
       
       {/* Messenger Header */}
       <div className="flex items-center justify-between p-3.5 bg-gradient-to-r from-red-950 via-[#330000] to-red-950 border-b border-red-900/80">
@@ -298,7 +300,7 @@ export const MessengerDrawer: React.FC<MessengerDrawerProps> = ({
           )}
 
           {/* Messages Area */}
-          <div className="p-4 h-64 overflow-y-auto space-y-3 bg-[#130101]">
+          <div className="p-4 h-64 sm:h-72 max-h-[48vh] overflow-y-auto space-y-3 bg-[#130101]">
             {!activeContact ? (
               <div className="text-center py-10 text-xs text-red-300/60 space-y-2">
                 <MessageSquare className="w-9 h-9 text-red-500/40 mx-auto" />
@@ -328,6 +330,7 @@ export const MessengerDrawer: React.FC<MessengerDrawerProps> = ({
                       <img
                         src={msg.senderAvatar}
                         alt={msg.senderName}
+                        referrerPolicy="no-referrer"
                         className="w-6 h-6 rounded-full object-cover border border-red-800 flex-shrink-0 mb-1"
                         onError={(e) => {
                           (e.target as HTMLImageElement).src = `https://ui-avatars.com/api/?name=${encodeURIComponent(msg.senderName)}&background=991b1b&color=ffffff`;

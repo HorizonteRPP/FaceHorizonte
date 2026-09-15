@@ -45,18 +45,42 @@ if (isStorageAvailable()) {
   }
 }
 
+// Safe setItem helper that handles quota and mobile browser storage restrictions gracefully
+export const safeSetItem = (key: string, value: string): void => {
+  if (!isStorageAvailable()) return;
+  try {
+    localStorage.setItem(key, value);
+  } catch (err) {
+    console.warn(`[storage] Could not save key "${key}" to localStorage:`, err);
+    try {
+      // If quota exceeded, clean up old non-critical caches
+      const nonCritical = ['facehorizont_posts_v4', 'facehorizont_clean_slate_v4'];
+      nonCritical.forEach((k) => {
+        if (k !== key) localStorage.removeItem(k);
+      });
+      localStorage.setItem(key, value);
+    } catch {
+      // Safely ignore, app continues in-memory with server sync
+    }
+  }
+};
+
 export const resetAllApplicationData = (): void => {
   if (!isStorageAvailable()) return;
-  localStorage.removeItem(KEYS.POSTS);
-  localStorage.removeItem(KEYS.MARKETPLACE);
-  localStorage.removeItem(KEYS.MESSAGES);
-  localStorage.removeItem(KEYS.GROUPS);
-  localStorage.removeItem(KEYS.REGISTERED_USERS);
-  localStorage.setItem(KEYS.POSTS, JSON.stringify([]));
-  localStorage.setItem(KEYS.MARKETPLACE, JSON.stringify([]));
-  localStorage.setItem(KEYS.MESSAGES, JSON.stringify([]));
-  localStorage.setItem(KEYS.GROUPS, JSON.stringify([]));
-  localStorage.setItem(KEYS.REGISTERED_USERS, JSON.stringify([]));
+  try {
+    localStorage.removeItem(KEYS.POSTS);
+    localStorage.removeItem(KEYS.MARKETPLACE);
+    localStorage.removeItem(KEYS.MESSAGES);
+    localStorage.removeItem(KEYS.GROUPS);
+    localStorage.removeItem(KEYS.REGISTERED_USERS);
+    safeSetItem(KEYS.POSTS, JSON.stringify([]));
+    safeSetItem(KEYS.MARKETPLACE, JSON.stringify([]));
+    safeSetItem(KEYS.MESSAGES, JSON.stringify([]));
+    safeSetItem(KEYS.GROUPS, JSON.stringify([]));
+    safeSetItem(KEYS.REGISTERED_USERS, JSON.stringify([]));
+  } catch (e) {
+    console.warn('Error resetting data:', e);
+  }
 };
 
 export const getStoredUser = (): User | null => {
@@ -75,7 +99,7 @@ export const saveStoredUser = (user: User | null): void => {
   if (!user) {
     localStorage.removeItem(KEYS.USER);
   } else {
-    localStorage.setItem(KEYS.USER, JSON.stringify(user));
+    safeSetItem(KEYS.USER, JSON.stringify(user));
     // Also add to registered users list
     const registered = getRegisteredUsers();
     const existingIdx = registered.findIndex((u) => u.id === user.id || u.username.toLowerCase() === user.username.toLowerCase());
@@ -84,7 +108,7 @@ export const saveStoredUser = (user: User | null): void => {
     } else {
       registered.push(user);
     }
-    localStorage.setItem(KEYS.REGISTERED_USERS, JSON.stringify(registered));
+    safeSetItem(KEYS.REGISTERED_USERS, JSON.stringify(registered));
   }
 };
 
@@ -92,7 +116,7 @@ export const getRegisteredUsers = (): User[] => {
   if (!isStorageAvailable()) return INITIAL_USERS;
   const raw = localStorage.getItem(KEYS.REGISTERED_USERS);
   if (!raw) {
-    localStorage.setItem(KEYS.REGISTERED_USERS, JSON.stringify(INITIAL_USERS));
+    safeSetItem(KEYS.REGISTERED_USERS, JSON.stringify(INITIAL_USERS));
     return INITIAL_USERS;
   }
   try {
@@ -105,7 +129,7 @@ export const getRegisteredUsers = (): User[] => {
 
 export const saveRegisteredUsers = (users: User[]): void => {
   if (!isStorageAvailable()) return;
-  localStorage.setItem(KEYS.REGISTERED_USERS, JSON.stringify(users));
+  safeSetItem(KEYS.REGISTERED_USERS, JSON.stringify(users));
 };
 
 export const clearStoredUser = (): void => {
@@ -116,7 +140,7 @@ export const getPosts = (): Post[] => {
   if (!isStorageAvailable()) return INITIAL_POSTS;
   const raw = localStorage.getItem(KEYS.POSTS);
   if (!raw) {
-    localStorage.setItem(KEYS.POSTS, JSON.stringify(INITIAL_POSTS));
+    safeSetItem(KEYS.POSTS, JSON.stringify(INITIAL_POSTS));
     return INITIAL_POSTS;
   }
   try {
@@ -129,14 +153,14 @@ export const getPosts = (): Post[] => {
 
 export const savePosts = (posts: Post[]): void => {
   if (!isStorageAvailable()) return;
-  localStorage.setItem(KEYS.POSTS, JSON.stringify(posts));
+  safeSetItem(KEYS.POSTS, JSON.stringify(posts));
 };
 
 export const getMarketplaceCars = (): MarketplaceCar[] => {
   if (!isStorageAvailable()) return INITIAL_MARKETPLACE;
   const raw = localStorage.getItem(KEYS.MARKETPLACE);
   if (!raw) {
-    localStorage.setItem(KEYS.MARKETPLACE, JSON.stringify(INITIAL_MARKETPLACE));
+    safeSetItem(KEYS.MARKETPLACE, JSON.stringify(INITIAL_MARKETPLACE));
     return INITIAL_MARKETPLACE;
   }
   try {
@@ -149,14 +173,14 @@ export const getMarketplaceCars = (): MarketplaceCar[] => {
 
 export const saveMarketplaceCars = (cars: MarketplaceCar[]): void => {
   if (!isStorageAvailable()) return;
-  localStorage.setItem(KEYS.MARKETPLACE, JSON.stringify(cars));
+  safeSetItem(KEYS.MARKETPLACE, JSON.stringify(cars));
 };
 
 export const getMessages = (): ChatMessage[] => {
   if (!isStorageAvailable()) return INITIAL_MESSAGES;
   const raw = localStorage.getItem(KEYS.MESSAGES);
   if (!raw) {
-    localStorage.setItem(KEYS.MESSAGES, JSON.stringify(INITIAL_MESSAGES));
+    safeSetItem(KEYS.MESSAGES, JSON.stringify(INITIAL_MESSAGES));
     return INITIAL_MESSAGES;
   }
   try {
@@ -169,14 +193,14 @@ export const getMessages = (): ChatMessage[] => {
 
 export const saveMessages = (messages: ChatMessage[]): void => {
   if (!isStorageAvailable()) return;
-  localStorage.setItem(KEYS.MESSAGES, JSON.stringify(messages));
+  safeSetItem(KEYS.MESSAGES, JSON.stringify(messages));
 };
 
 export const getGroups = (): Group[] => {
   if (!isStorageAvailable()) return INITIAL_GROUPS;
   const raw = localStorage.getItem(KEYS.GROUPS);
   if (!raw) {
-    localStorage.setItem(KEYS.GROUPS, JSON.stringify(INITIAL_GROUPS));
+    safeSetItem(KEYS.GROUPS, JSON.stringify(INITIAL_GROUPS));
     return INITIAL_GROUPS;
   }
   try {
@@ -189,7 +213,7 @@ export const getGroups = (): Group[] => {
 
 export const saveGroups = (groups: Group[]): void => {
   if (!isStorageAvailable()) return;
-  localStorage.setItem(KEYS.GROUPS, JSON.stringify(groups));
+  safeSetItem(KEYS.GROUPS, JSON.stringify(groups));
 };
 
 export const getAdminSession = (): AdminSession => {
@@ -211,7 +235,7 @@ export const getAdminSession = (): AdminSession => {
 
 export const saveAdminSession = (session: AdminSession): void => {
   if (!isStorageAvailable()) return;
-  localStorage.setItem(KEYS.ADMIN, JSON.stringify(session));
+  safeSetItem(KEYS.ADMIN, JSON.stringify(session));
 };
 
 export const getDatabaseHealth = (): DatabaseHealth => {
@@ -255,14 +279,14 @@ export const getDatabaseHealth = (): DatabaseHealth => {
     lastSyncTime: Date.now()
   };
   if (isStorageAvailable()) {
-    localStorage.setItem(KEYS.DB_STATUS, JSON.stringify(initial));
+    safeSetItem(KEYS.DB_STATUS, JSON.stringify(initial));
   }
   return initial;
 };
 
 export const saveDatabaseHealth = (health: DatabaseHealth): void => {
   if (!isStorageAvailable()) return;
-  localStorage.setItem(KEYS.DB_STATUS, JSON.stringify(health));
+  safeSetItem(KEYS.DB_STATUS, JSON.stringify(health));
 };
 
 // Theme Mode Storage ('charcoal' is the modern dark gray style, 'light' is white/clean)
@@ -274,7 +298,7 @@ export const getStoredTheme = (): ThemeMode => {
 
 export const saveStoredTheme = (theme: ThemeMode): void => {
   if (!isStorageAvailable()) return;
-  localStorage.setItem(KEYS.THEME, theme);
+  safeSetItem(KEYS.THEME, theme);
 };
 
 // Discord OAuth2 Config Storage (Only for user name & avatar)
@@ -301,7 +325,7 @@ export const getStoredDiscordConfig = (): DiscordApiConfig => {
 
 export const saveStoredDiscordConfig = (config: DiscordApiConfig): void => {
   if (!isStorageAvailable()) return;
-  localStorage.setItem(KEYS.DISCORD_CONFIG, JSON.stringify(config));
+  safeSetItem(KEYS.DISCORD_CONFIG, JSON.stringify(config));
 };
 
 // Supabase API Config Storage
@@ -326,7 +350,7 @@ export const getStoredSupabaseConfig = (): SupabaseApiConfig => {
 
 export const saveStoredSupabaseConfig = (config: SupabaseApiConfig): void => {
   if (!isStorageAvailable()) return;
-  localStorage.setItem(KEYS.SUPABASE_CONFIG, JSON.stringify(config));
+  safeSetItem(KEYS.SUPABASE_CONFIG, JSON.stringify(config));
 };
 
 export const generateRpSellerReply = (sellerName: string, userMessage: string, carTitle?: string): string => {

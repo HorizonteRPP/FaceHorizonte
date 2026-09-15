@@ -10,8 +10,11 @@ import {
   Upload, 
   Link2, 
   X, 
-  Sparkles
+  Sparkles,
+  RefreshCw,
+  Loader2
 } from 'lucide-react';
+import { compressImage } from '../utils/imageCompressor';
 
 interface MarketplaceViewProps {
   cars: MarketplaceCar[];
@@ -22,6 +25,8 @@ interface MarketplaceViewProps {
   onAddCar: (car: Omit<MarketplaceCar, 'id' | 'createdAt'>) => void;
   onDeleteCar: (carId: string) => void;
   onContactSeller: (car: MarketplaceCar) => void;
+  onManualSync?: () => void;
+  isSyncing?: boolean;
 }
 
 const CATEGORIES = [
@@ -41,7 +46,9 @@ export const MarketplaceView: React.FC<MarketplaceViewProps> = ({
   onOpenAuth,
   onAddCar,
   onDeleteCar,
-  onContactSeller
+  onContactSeller,
+  onManualSync,
+  isSyncing = false
 }) => {
   const [searchQuery, setSearchQuery] = useState('');
   const [selectedCategory, setSelectedCategory] = useState<string>('Todos');
@@ -72,26 +79,38 @@ export const MarketplaceView: React.FC<MarketplaceViewProps> = ({
     ? 'bg-gray-50 border-gray-300 text-gray-900 placeholder-gray-400 focus:border-red-500'
     : 'bg-[#131417] border-[#2c2e36] text-white placeholder-gray-500 focus:border-red-600';
 
-  const handleFileUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
+  const [isCompressingPhoto, setIsCompressingPhoto] = useState(false);
+
+  const handleFileUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
     if (!file) return;
 
-    if (file.size > 8 * 1024 * 1024) {
-      setFormError('La foto no debe superar los 8MB.');
+    if (file.size > 15 * 1024 * 1024) {
+      setFormError('La foto no debe superar los 15MB.');
       return;
     }
 
-    const reader = new FileReader();
-    reader.onload = () => {
-      const res = reader.result as string;
-      setImagePreview(res);
-      setImageUrl(res);
+    try {
+      setIsCompressingPhoto(true);
       setFormError('');
-    };
-    reader.readAsDataURL(file);
+      const compressed = await compressImage(file, 1000, 700, 0.82);
+      setImagePreview(compressed);
+      setImageUrl(compressed);
+    } catch {
+      const reader = new FileReader();
+      reader.onload = () => {
+        const res = reader.result as string;
+        setImagePreview(res);
+        setImageUrl(res);
+        setFormError('');
+      };
+      reader.readAsDataURL(file);
+    } finally {
+      setIsCompressingPhoto(false);
+    }
   };
 
-  const handlePublishSubmit = (e: React.FormEvent) => {
+  const handlePublishSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!currentUser) {
       onOpenAuth();
@@ -110,10 +129,18 @@ export const MarketplaceView: React.FC<MarketplaceViewProps> = ({
       return;
     }
 
-    const finalPhoto =
+    let finalPhoto =
       imagePreview ||
       imageUrl.trim() ||
       'https://images.unsplash.com/photo-1617814076367-b759c7d7e738?w=800&auto=format&fit=crop&q=80';
+
+    if (finalPhoto.startsWith('data:image')) {
+      try {
+        finalPhoto = await compressImage(finalPhoto, 1000, 700, 0.82);
+      } catch {
+        // use as is
+      }
+    }
 
     onAddCar({
       sellerId: currentUser.id,
@@ -170,21 +197,44 @@ export const MarketplaceView: React.FC<MarketplaceViewProps> = ({
           </p>
         </div>
 
-        {/* Publish Button */}
-        <button
-          id="btn-open-publish-car"
-          onClick={() => {
-            if (!currentUser) {
-              onOpenAuth();
-            } else {
-              setIsPublishModalOpen(true);
-            }
-          }}
-          className="px-4 py-2.5 rounded-xl bg-red-600 hover:bg-red-500 text-white text-xs font-bold shadow-md transition-all cursor-pointer flex items-center gap-2 self-stretch md:self-auto justify-center"
-        >
-          <Plus className="w-4 h-4" />
-          <span>Publicar Auto en Venta</span>
-        </button>
+        {/* Action Buttons */}
+        <div className="flex items-center gap-2 self-stretch md:self-auto">
+          {onManualSync && (
+            <button
+              id="btn-sync-marketplace"
+              type="button"
+              onClick={onManualSync}
+              disabled={isSyncing}
+              className={`px-3.5 py-2.5 rounded-xl border text-xs font-bold transition-all cursor-pointer flex items-center gap-2 ${
+                isLight 
+                  ? 'bg-white hover:bg-gray-100 text-gray-700 border-gray-300' 
+                  : 'bg-[#202229] hover:bg-[#2a2d36] text-gray-200 border-[#323642]'
+              }`}
+              title="Sincronizar autos con PC y móviles"
+            >
+              <RefreshCw className={`w-3.5 h-3.5 text-red-500 ${isSyncing ? 'animate-spin' : ''}`} />
+              <span className="hidden sm:inline">Sincronizar</span>
+              <span className="px-1.5 py-0.5 rounded-full text-[10px] bg-red-600/20 text-red-400 font-extrabold border border-red-500/30">
+                {cars.length}
+              </span>
+            </button>
+          )}
+
+          <button
+            id="btn-open-publish-car"
+            onClick={() => {
+              if (!currentUser) {
+                onOpenAuth();
+              } else {
+                setIsPublishModalOpen(true);
+              }
+            }}
+            className="flex-1 sm:flex-initial px-4 py-2.5 rounded-xl bg-red-600 hover:bg-red-500 text-white text-xs font-bold shadow-md transition-all cursor-pointer flex items-center justify-center gap-2"
+          >
+            <Plus className="w-4 h-4" />
+            <span>Publicar Auto en Venta</span>
+          </button>
+        </div>
       </div>
 
       {/* Filters & Search */}
@@ -265,6 +315,7 @@ export const MarketplaceView: React.FC<MarketplaceViewProps> = ({
                   <img
                     src={car.imageUrl}
                     alt={car.title}
+                    referrerPolicy="no-referrer"
                     className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-300"
                     onError={(e) => {
                       (e.target as HTMLImageElement).src =

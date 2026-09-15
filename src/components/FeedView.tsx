@@ -35,13 +35,13 @@ interface FeedViewProps {
 }
 
 const RP_TAGS = [
-  'Aviso Oficial RP',
+  'General',
+  'Anécdota RP',
   'Venta de Autos',
   'Carreras Nocturnas',
   'Taller Mecánico',
   'Comisaría HPD',
-  'Anécdota RP',
-  'General'
+  'Aviso Oficial RP'
 ];
 
 export const FeedView: React.FC<FeedViewProps> = ({
@@ -59,7 +59,7 @@ export const FeedView: React.FC<FeedViewProps> = ({
   onOpenMessages
 }) => {
   const [postContent, setPostContent] = useState('');
-  const [selectedTag, setSelectedTag] = useState(RP_TAGS[0]);
+  const [selectedTag, setSelectedTag] = useState('General');
   const [postImageUrl, setPostImageUrl] = useState('');
   const [imageUploadMethod, setImageUploadMethod] = useState<'none' | 'upload' | 'url'>('none');
   const [imagePreview, setImagePreview] = useState<string | null>(null);
@@ -100,7 +100,8 @@ export const FeedView: React.FC<FeedViewProps> = ({
     }
 
     const finalImage = imagePreview || (postImageUrl.trim() ? postImageUrl.trim() : undefined);
-    onAddPost(postContent.trim(), finalImage, selectedTag);
+    const effectiveTag = (!isAdminActive && selectedTag === 'Aviso Oficial RP') ? 'General' : selectedTag;
+    onAddPost(postContent.trim(), finalImage, effectiveTag);
 
     // Reset form
     setPostContent('');
@@ -300,7 +301,7 @@ export const FeedView: React.FC<FeedViewProps> = ({
                 <span className={`text-[11px] font-semibold whitespace-nowrap ${textSecondary}`}>
                   Categoría:
                 </span>
-                {RP_TAGS.map((tag) => (
+                {(isAdminActive ? RP_TAGS : RP_TAGS.filter((t) => t !== 'Aviso Oficial RP')).map((tag) => (
                   <button
                     key={tag}
                     type="button"
