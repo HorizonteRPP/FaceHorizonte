@@ -9,7 +9,8 @@ import {
   Maximize2, 
   User as UserIcon,
   ShieldCheck,
-  Search
+  Search,
+  Trash2
 } from 'lucide-react';
 
 interface MessengerDrawerProps {
@@ -21,6 +22,9 @@ interface MessengerDrawerProps {
   setActiveTargetUserId: (userId: string | null) => void;
   allMessages: ChatMessage[];
   onSendMessage: (msg: ChatMessage) => void;
+  onDeleteMessage?: (msgId: string) => void;
+  onClearConversation?: (contactId: string) => void;
+  isAdmin?: boolean;
   onOpenAuth: () => void;
   carContext?: MarketplaceCar | null;
 }
@@ -42,6 +46,9 @@ export const MessengerDrawer: React.FC<MessengerDrawerProps> = ({
   setActiveTargetUserId,
   allMessages,
   onSendMessage,
+  onDeleteMessage,
+  onClearConversation,
+  isAdmin = false,
   onOpenAuth,
   carContext
 }) => {
@@ -229,6 +236,20 @@ export const MessengerDrawer: React.FC<MessengerDrawerProps> = ({
 
         {/* Controls */}
         <div className="flex items-center gap-1 text-red-300">
+          {activeContact && threadMessages.length > 0 && onClearConversation && (
+            <button
+              id="messenger-btn-clear-chat"
+              onClick={() => {
+                if (window.confirm(`¿Estás seguro de que deseas vaciar todos los mensajes del chat con ${activeContact.name}?`)) {
+                  onClearConversation(activeContact.id);
+                }
+              }}
+              className="p-1.5 hover:text-red-200 hover:bg-red-900/60 rounded-lg cursor-pointer text-red-400 transition-colors"
+              title={`Vaciar chat con ${activeContact.name}`}
+            >
+              <Trash2 className="w-4 h-4" />
+            </button>
+          )}
           <button
             id="messenger-btn-minimize"
             onClick={() => setIsMinimized(!isMinimized)}
@@ -324,7 +345,7 @@ export const MessengerDrawer: React.FC<MessengerDrawerProps> = ({
                 return (
                   <div
                     key={msg.id}
-                    className={`flex items-end gap-2 ${isMe ? 'justify-end' : 'justify-start'}`}
+                    className={`group flex items-end gap-2 ${isMe ? 'justify-end' : 'justify-start'}`}
                   >
                     {!isMe && (
                       <img
@@ -338,19 +359,34 @@ export const MessengerDrawer: React.FC<MessengerDrawerProps> = ({
                       />
                     )}
                     <div
-                      className={`max-w-[78%] rounded-2xl px-3.5 py-2 text-xs leading-relaxed shadow ${
+                      className={`relative max-w-[78%] rounded-2xl px-3.5 py-2 text-xs leading-relaxed shadow ${
                         isMe
                           ? 'bg-gradient-to-r from-red-600 to-red-700 text-white rounded-br-none'
                           : 'bg-[#280303] text-red-100 border border-red-900 rounded-bl-none'
                       }`}
                     >
-                      <p>{msg.text}</p>
-                      <span className="text-[9px] text-white/50 block text-right mt-1">
-                        {new Date(msg.timestamp).toLocaleTimeString([], {
-                          hour: '2-digit',
-                          minute: '2-digit'
-                        })}
-                      </span>
+                      <p className="break-words">{msg.text}</p>
+                      <div className="flex items-center justify-between gap-2 mt-1">
+                        <span className="text-[9px] text-white/50 block">
+                          {new Date(msg.timestamp).toLocaleTimeString([], {
+                            hour: '2-digit',
+                            minute: '2-digit'
+                          })}
+                        </span>
+                        {(isMe || isAdmin) && onDeleteMessage && (
+                          <button
+                            onClick={() => {
+                              if (window.confirm('¿Eliminar este mensaje?')) {
+                                onDeleteMessage(msg.id);
+                              }
+                            }}
+                            className="opacity-70 hover:opacity-100 p-0.5 rounded text-red-200 hover:text-white transition-opacity cursor-pointer ml-1"
+                            title="Eliminar mensaje"
+                          >
+                            <Trash2 className="w-3 h-3" />
+                          </button>
+                        )}
+                      </div>
                     </div>
                   </div>
                 );

@@ -52,10 +52,10 @@ export async function testSupabaseConnection(config: SupabaseApiConfig): Promise
 export async function syncMessagesWithSupabase(
   config: SupabaseApiConfig,
   localMessages: ChatMessage[]
-): Promise<ChatMessage[]> {
+): Promise<ChatMessage[] | null> {
   const url = cleanSupabaseUrl(config.projectUrl);
   const key = config.anonKey.trim();
-  if (!url || !key) return localMessages;
+  if (!url || !key) return null;
 
   try {
     // 1. Fetch remote messages
@@ -128,7 +128,7 @@ export async function syncMessagesWithSupabase(
     return merged;
   } catch (e) {
     console.warn('Sync messages with Supabase error:', e);
-    return localMessages;
+    return null;
   }
 }
 
@@ -138,10 +138,10 @@ export async function syncMessagesWithSupabase(
 export async function syncPostsWithSupabase(
   config: SupabaseApiConfig,
   localPosts: Post[]
-): Promise<Post[]> {
+): Promise<Post[] | null> {
   const url = cleanSupabaseUrl(config.projectUrl);
   const key = config.anonKey.trim();
-  if (!url || !key) return localPosts;
+  if (!url || !key) return null;
 
   try {
     const res = await fetch(`${url}/rest/v1/posts?select=*&order=timestamp.desc`, {
@@ -215,7 +215,7 @@ export async function syncPostsWithSupabase(
     return merged;
   } catch (e) {
     console.warn('Sync posts with Supabase error:', e);
-    return localPosts;
+    return null;
   }
 }
 
@@ -225,10 +225,10 @@ export async function syncPostsWithSupabase(
 export async function syncCarsWithSupabase(
   config: SupabaseApiConfig,
   localCars: MarketplaceCar[]
-): Promise<MarketplaceCar[]> {
+): Promise<MarketplaceCar[] | null> {
   const url = cleanSupabaseUrl(config.projectUrl);
   const key = config.anonKey.trim();
-  if (!url || !key) return localCars;
+  if (!url || !key) return null;
 
   try {
     const res = await fetch(`${url}/rest/v1/marketplace?select=*&order=created_at.desc`, {
@@ -304,7 +304,7 @@ export async function syncCarsWithSupabase(
     return merged;
   } catch (e) {
     console.warn('Sync marketplace cars with Supabase error:', e);
-    return localCars;
+    return null;
   }
 }
 

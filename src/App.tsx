@@ -64,6 +64,7 @@ import { MessengerDrawer } from './components/MessengerDrawer';
 import { AdminModal } from './components/AdminModal';
 import { SosModal } from './components/SosModal';
 import { ProfileModal } from './components/ProfileModal';
+import { AuthModal } from './components/AuthModal';
 import { Footer } from './components/Footer';
 
 export default function App() {
@@ -95,6 +96,7 @@ export default function App() {
   const [auditLogs, setAuditLogs] = useState<ServerAuditLog[]>([]);
 
   // Modals Visibility
+  const [authModalOpen, setAuthModalOpen] = useState(false);
   const [adminModalOpen, setAdminModalOpen] = useState(false);
   const [sosModalOpen, setSosModalOpen] = useState(false);
   const [createGroupModalOpen, setCreateGroupModalOpen] = useState(false);
@@ -281,7 +283,7 @@ export default function App() {
       const resPosts = await fetch('/api/posts');
       if (resPosts.ok) {
         const serverPosts: Post[] = await resPosts.json();
-        if (Array.isArray(serverPosts) && serverPosts.length > 0) {
+        if (Array.isArray(serverPosts)) {
           setPosts(serverPosts);
           savePosts(serverPosts);
         }
@@ -291,7 +293,7 @@ export default function App() {
       const resCars = await fetch('/api/marketplace');
       if (resCars.ok) {
         const serverCars: MarketplaceCar[] = await resCars.json();
-        if (Array.isArray(serverCars) && serverCars.length > 0) {
+        if (Array.isArray(serverCars)) {
           setCars(serverCars);
           saveMarketplaceCars(serverCars);
         }
@@ -304,6 +306,16 @@ export default function App() {
         if (Array.isArray(serverMsgs)) {
           setMessages(serverMsgs);
           saveMessages(serverMsgs);
+        }
+      }
+
+      // 4.5 Fetch groups from server (Cross-device PC <-> Mobile sync)
+      const resGroups = await fetch('/api/groups');
+      if (resGroups.ok) {
+        const serverGroups: Group[] = await resGroups.json();
+        if (Array.isArray(serverGroups)) {
+          setGroups(serverGroups);
+          saveGroups(serverGroups);
         }
       }
 
@@ -344,8 +356,13 @@ export default function App() {
         }
       }
 
-      // 7. Supabase cloud sync if configured
-      if (supabaseConfig?.projectUrl && supabaseConfig?.anonKey) {
+      // 7. Supabase cloud sync if configured and enabled
+      if (
+        supabaseConfig?.enabled &&
+        supabaseConfig?.projectUrl &&
+        supabaseConfig?.anonKey &&
+        !supabaseConfig.projectUrl.includes('facehorizont-rp.supabase.co')
+      ) {
         syncPostsWithSupabase(supabaseConfig, posts).then((supaPosts) => {
           if (supaPosts && supaPosts.length > 0) {
             setPosts(supaPosts);
@@ -451,10 +468,16 @@ export default function App() {
     savePosts(updated);
     showToast('Publicación eliminada.');
 
-    fetch(`/api/posts/${postId}`, {
+    const uId = encodeURIComponent(currentUser?.id || '');
+    const isAdm = Boolean(adminSession.isAdmin1 || adminSession.isAdmin2);
+    fetch(`/api/posts/${postId}?userId=${uId}&isAdmin=${isAdm}`, {
       method: 'DELETE',
       headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ userId: currentUser?.id, isAdmin: !!adminSession.isAdmin1 || !!adminSession.isAdmin2 })
+      body: JSON.stringify({ 
+        userId: currentUser?.id, 
+        authorName: currentUser?.username,
+        isAdmin: isAdm 
+      })
     })
       .then(() => syncWithServerAndSupabase())
       .catch(() => {});
@@ -557,10 +580,16 @@ export default function App() {
     saveMarketplaceCars(updated);
     showToast('Vehículo retirado del marketplace.');
 
-    fetch(`/api/marketplace/${carId}`, {
+    const sId = encodeURIComponent(currentUser?.id || '');
+    const isAdm = Boolean(adminSession.isAdmin1 || adminSession.isAdmin2);
+    fetch(`/api/marketplace/${carId}?sellerId=${sId}&isAdmin=${isAdm}`, {
       method: 'DELETE',
       headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ sellerId: currentUser?.id, isAdmin: !!adminSession.isAdmin1 || !!adminSession.isAdmin2 })
+      body: JSON.stringify({ 
+        sellerId: currentUser?.id,
+        sellerName: currentUser?.username,
+        isAdmin: isAdm 
+      })
     })
       .then(() => syncWithServerAndSupabase())
       .catch(() => {});
@@ -568,7 +597,7 @@ export default function App() {
 
   const handleContactSeller = (car: MarketplaceCar) => {
     if (!currentUser) {
-      handleStartDiscordOAuth();
+      setAuthModalOpen(true);
       return;
     }
     setActiveChatUserId(car.sellerId);
@@ -615,7 +644,7 @@ export default function App() {
       .then(() => syncWithServerAndSupabase())
       .catch((err) => console.warn('Message sync err:', err));
 
-    if (supabaseConfig?.projectUrl && supabaseConfig?.anonKey) {
+    if (supabaseConfig?.enabled && supabaseConfig?.projectUrl && supabaseConfig?.anonKey && !supabaseConfig.projectUrl.includes('facehorizont-rp.supabase.co')) {
       syncMessagesWithSupabase(supabaseConfig, updated).catch(() => {});
     }
   };
@@ -634,14 +663,34 @@ export default function App() {
       .then(() => syncWithServerAndSupabase())
       .catch((err) => console.warn('Chat message sync err:', err));
 
-    if (supabaseConfig?.projectUrl && supabaseConfig?.anonKey) {
+    if (supabaseConfig?.enabled && supabaseConfig?.projectUrl && supabaseConfig?.anonKey && !supabaseConfig.projectUrl.includes('facehorizont-rp.supabase.co')) {
       syncMessagesWithSupabase(supabaseConfig, updated).catch(() => {});
     }
   };
 
+  const handleClearConversation = (contactId: string) => {
+    const myId = currentUser?.id || 'guest_user';
+    const updated = messages.filter(
+      (m) =>
+        !(
+          (m.senderId === myId && m.recipientId === contactId) ||
+          (m.senderId === contactId && m.recipientId === myId)
+        )
+    );
+    setMessages(updated);
+    saveMessages(updated);
+    showToast('Conversación vaciada.');
+
+    fetch(`/api/messages/conversation/${myId}/${contactId}`, {
+      method: 'DELETE'
+    })
+      .then(() => syncWithServerAndSupabase())
+      .catch((err) => console.warn('Clear conversation err:', err));
+  };
+
   const handleOpenMessages = (targetUserId?: string) => {
     if (!currentUser) {
-      handleStartDiscordOAuth();
+      setAuthModalOpen(true);
       return;
     }
     if (targetUserId) {
@@ -668,30 +717,41 @@ export default function App() {
     const updated = [newGroup, ...groups];
     setGroups(updated);
     saveGroups(updated);
+
+    fetch('/api/groups', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(newGroup)
+    })
+      .then(() => syncWithServerAndSupabase())
+      .catch(() => {});
+
     showToast(`Grupo "${newGroup.name}" creado con éxito.`);
   };
 
   const handleJoinGroup = (groupId: string) => {
     if (!currentUser) {
-      handleStartDiscordOAuth();
+      setAuthModalOpen(true);
       return;
     }
 
+    const targetGroup = groups.find((g) => g.id === groupId);
+    if (!targetGroup) return;
+    const alreadyMember = targetGroup.members.some((m) => m.userId === currentUser.id);
+    if (alreadyMember) return;
+
+    const newMember: GroupMember = {
+      userId: currentUser.id,
+      username: currentUser.username,
+      avatar: currentUser.avatar,
+      role: 'member',
+      joinedAt: Date.now(),
+      canPost: true,
+      canChat: true
+    };
+
     const updated = groups.map((g) => {
       if (g.id !== groupId) return g;
-      const alreadyMember = g.members.some((m) => m.userId === currentUser.id);
-      if (alreadyMember) return g;
-
-      const newMember: GroupMember = {
-        userId: currentUser.id,
-        username: currentUser.username,
-        avatar: currentUser.avatar,
-        role: 'member',
-        joinedAt: Date.now(),
-        canPost: true,
-        canChat: true
-      };
-
       return {
         ...g,
         members: [...g.members, newMember]
@@ -700,6 +760,15 @@ export default function App() {
 
     setGroups(updated);
     saveGroups(updated);
+
+    fetch(`/api/groups/${groupId}/join`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(newMember)
+    })
+      .then(() => syncWithServerAndSupabase())
+      .catch(() => {});
+
     showToast('Te has unido al grupo.');
   };
 
@@ -716,6 +785,15 @@ export default function App() {
 
     setGroups(updated);
     saveGroups(updated);
+
+    fetch(`/api/groups/${groupId}/leave`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ userId: currentUser.id })
+    })
+      .then(() => syncWithServerAndSupabase())
+      .catch(() => {});
+
     showToast('Has salido del grupo.');
   };
 
@@ -729,7 +807,50 @@ export default function App() {
     });
     setGroups(updated);
     saveGroups(updated);
+
+    fetch(`/api/groups/${groupId}/posts`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(post)
+    })
+      .then(() => syncWithServerAndSupabase())
+      .catch(() => {});
+
     showToast('Publicación compartida en el muro del grupo.');
+  };
+
+  const handleDeleteGroupPost = (groupId: string, postId: string) => {
+    const updated = groups.map((g) => {
+      if (g.id !== groupId) return g;
+      return { ...g, posts: (g.posts || []).filter((p) => p.id !== postId) };
+    });
+    setGroups(updated);
+    saveGroups(updated);
+
+    fetch(`/api/groups/${groupId}/posts/${postId}`, {
+      method: 'DELETE'
+    })
+      .then(() => syncWithServerAndSupabase())
+      .catch(() => {});
+
+    showToast('Publicación del grupo eliminada.');
+  };
+
+  const handleDeleteGroupMessage = (groupId: string, msgId: string) => {
+    const updated = groups.map((g) => {
+      if (g.id !== groupId) return g;
+      return { ...g, messages: (g.messages || []).filter((m) => m.id !== msgId) };
+    });
+    setGroups(updated);
+    saveGroups(updated);
+
+    fetch(`/api/groups/${groupId}/messages/${msgId}`, {
+      method: 'DELETE'
+    })
+      .then(() => syncWithServerAndSupabase())
+      .catch(() => {});
+
+    showToast('Mensaje del grupo eliminado.');
   };
 
   const handleToggleGroupPostReaction = (groupId: string, postId: string, type: 'heart' | 'fire' | 'clap') => {
@@ -785,6 +906,14 @@ export default function App() {
     });
     setGroups(updated);
     saveGroups(updated);
+
+    fetch(`/api/groups/${groupId}/messages`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(message)
+    })
+      .then(() => syncWithServerAndSupabase())
+      .catch(() => {});
   };
 
   const handleUpdateMemberPermission = (
@@ -819,9 +948,53 @@ export default function App() {
   const handleRegisterSuccess = (user: User) => {
     setCurrentUser(user);
     saveStoredUser(user);
-    const registered = getRegisteredUsers();
-    setRegisteredUsers(registered);
+    setRegisteredUsers((prev) => {
+      const filtered = prev.filter((u) => u.id !== user.id);
+      const updated = [user, ...filtered];
+      saveRegisteredUsers(updated);
+      return updated;
+    });
+
+    fetch('/api/users', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(user)
+    })
+      .then(() => syncWithServerAndSupabase())
+      .catch(() => {});
+
     showToast(`¡Bienvenido/a a FaceHorizont, ${user.username}!`);
+  };
+
+  const handleLoginAsCitizen = (username: string, avatarUrl: string, role: 'citizen' | 'police') => {
+    const cleanName = username.trim();
+    const existing = registeredUsers.find(
+      (u) => u.username.toLowerCase() === cleanName.toLowerCase()
+    );
+
+    let userToLogin: User;
+    if (existing) {
+      userToLogin = {
+        ...existing,
+        avatar: avatarUrl || existing.avatar,
+        role: role || existing.role
+      };
+    } else {
+      const safeId = `user_${cleanName.toLowerCase().replace(/[^a-z0-9_]/g, '')}`;
+      userToLogin = {
+        id: safeId,
+        username: cleanName,
+        avatar: avatarUrl || `https://ui-avatars.com/api/?name=${encodeURIComponent(cleanName)}&background=991b1b&color=ffffff`,
+        role,
+        isDiscordUser: false,
+        discordTag: `@${cleanName}`,
+        bio: `Ciudadano activo de Horizonte RP.`,
+        createdAt: Date.now()
+      };
+    }
+
+    handleRegisterSuccess(userToLogin);
+    setAuthModalOpen(false);
   };
 
   const handleLogout = () => {
@@ -1036,7 +1209,7 @@ export default function App() {
         unreadCount={unreadMessagesCount}
         theme={theme}
         onToggleTheme={handleToggleTheme}
-        onOpenAuth={handleStartDiscordOAuth}
+        onOpenAuth={() => setAuthModalOpen(true)}
         onLogout={handleLogout}
         onOpenAdminModal={() => setAdminModalOpen(true)}
         onExitAdmin={handleExitAdmin}
@@ -1054,7 +1227,7 @@ export default function App() {
             adminSession={adminSession}
             theme={theme}
             registeredUsers={registeredUsers}
-            onOpenAuth={handleStartDiscordOAuth}
+            onOpenAuth={() => setAuthModalOpen(true)}
             onAddPost={handleAddPost}
             onDeletePost={handleDeletePost}
             onToggleReaction={handleToggleReaction}
@@ -1068,7 +1241,7 @@ export default function App() {
             currentUser={currentUser}
             adminSession={adminSession}
             theme={theme}
-            onOpenAuth={handleStartDiscordOAuth}
+            onOpenAuth={() => setAuthModalOpen(true)}
             onAddCar={handleAddCar}
             onDeleteCar={handleDeleteCar}
             onContactSeller={handleContactSeller}
@@ -1081,14 +1254,16 @@ export default function App() {
             currentUser={currentUser}
             adminSession={adminSession}
             theme={theme}
-            onOpenAuth={handleStartDiscordOAuth}
+            onOpenAuth={() => setAuthModalOpen(true)}
             onOpenCreateGroup={() => setCreateGroupModalOpen(true)}
             onJoinGroup={handleJoinGroup}
             onLeaveGroup={handleLeaveGroup}
             onAddGroupPost={handleAddGroupPost}
+            onDeleteGroupPost={handleDeleteGroupPost}
             onToggleGroupPostReaction={handleToggleGroupPostReaction}
             onAddGroupPostComment={handleAddGroupPostComment}
             onSendGroupMessage={handleSendGroupMessage}
+            onDeleteGroupMessage={handleDeleteGroupMessage}
             onUpdateMemberPermission={handleUpdateMemberPermission}
             showToast={showToast}
           />
@@ -1105,7 +1280,10 @@ export default function App() {
         setActiveTargetUserId={setActiveChatUserId}
         allMessages={messages}
         onSendMessage={handleSendChatMessage}
-        onOpenAuth={handleStartDiscordOAuth}
+        onDeleteMessage={handleDeleteMessage}
+        onClearConversation={handleClearConversation}
+        isAdmin={Boolean(adminSession.isAdmin1 || adminSession.isAdmin2)}
+        onOpenAuth={() => setAuthModalOpen(true)}
         carContext={carChatContext}
       />
 
@@ -1115,7 +1293,24 @@ export default function App() {
         onClose={() => setCreateGroupModalOpen(false)}
         currentUser={currentUser}
         onCreateGroup={handleCreateGroup}
-        onOpenAuth={handleStartDiscordOAuth}
+        onOpenAuth={() => setAuthModalOpen(true)}
+      />
+
+      {/* Citizen / Discord Auth Modal */}
+      <AuthModal
+        isOpen={authModalOpen}
+        onClose={() => setAuthModalOpen(false)}
+        currentUser={currentUser}
+        registeredUsers={registeredUsers}
+        onSelectExistingUser={(user) => {
+          handleRegisterSuccess(user);
+          setAuthModalOpen(false);
+        }}
+        onLoginAsCitizen={handleLoginAsCitizen}
+        onStartDiscordOAuth={handleStartDiscordOAuth}
+        onLogout={handleLogout}
+        theme={theme}
+        showToast={showToast}
       />
 
       {/* Admin / SuperAdmin Master Modal */}

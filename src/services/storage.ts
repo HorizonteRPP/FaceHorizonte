@@ -331,10 +331,11 @@ export const saveStoredDiscordConfig = (config: DiscordApiConfig): void => {
 // Supabase API Config Storage
 export const getStoredSupabaseConfig = (): SupabaseApiConfig => {
   const defaultCfg: SupabaseApiConfig = {
-    projectUrl: 'https://facehorizont-rp.supabase.co',
-    anonKey: 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImZhY2Vob3Jpem9udC1ycCIsInJvbGUiOiJhbm9uIiwiaWF0IjoxNzAwMDAwMDAwLCJleHAiOjIwMDAwMDAwMDB9.sampleKeyForHorizonteRpLiveDemoOnlyNotRealSecret',
+    projectUrl: '',
+    anonKey: '',
     serviceRoleKey: '',
-    dbMode: 'supabase_only'
+    dbMode: 'local',
+    enabled: false
   };
 
   if (!isStorageAvailable()) return defaultCfg;
@@ -342,6 +343,9 @@ export const getStoredSupabaseConfig = (): SupabaseApiConfig => {
   if (!raw) return defaultCfg;
   try {
     const parsed = JSON.parse(raw);
+    if (parsed.projectUrl && parsed.projectUrl.includes('facehorizont-rp.supabase.co')) {
+      return defaultCfg;
+    }
     return { ...defaultCfg, ...parsed };
   } catch {
     return defaultCfg;

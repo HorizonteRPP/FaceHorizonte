@@ -53,21 +53,6 @@
   ],
   "serverCars": [
     {
-      "id": "car_cross_test_1",
-      "sellerId": "user_dev_cross",
-      "sellerName": "HorizonteRP_Driver",
-      "sellerAvatar": "https://images.unsplash.com/photo-1535713875002-d1d0cf377fde?w=100",
-      "title": "Nissan GT-R R35 Nismo",
-      "price": 620000,
-      "currency": "RP$",
-      "description": "Nissan GT-R preparado para carreras en la autopista de Horizonte RP.",
-      "imageUrl": "https://images.unsplash.com/photo-1617814076367-b759c7d7e738?w=800",
-      "category": "Deportivo",
-      "condition": "Excelente",
-      "location": "Puerto Horizonte",
-      "createdAt": 1700000001000
-    },
-    {
       "id": "car_1",
       "sellerId": "user_pepito",
       "sellerName": "Pepito",
@@ -113,8 +98,31 @@
       "createdAt": 1789408505783
     }
   ],
-  "serverMessages": [],
+  "serverMessages": [
+    {
+      "id": "m_1",
+      "senderId": "user_destving",
+      "senderName": "Destving",
+      "senderAvatar": "https://images.unsplash.com/photo-1535713875002-d1d0cf377fde?w=200&h=200&fit=crop&crop=faces",
+      "recipientId": "guest_or_current",
+      "recipientName": "Ciudadano",
+      "text": "¡Hola! Bienvenido a FaceHorizont. Si necesitas ayuda con el servidor de Roleplay, permisos o eventos, no dudes en escribirme por aquí.",
+      "timestamp": 1789493418623,
+      "isRead": false
+    }
+  ],
   "serverUsers": [
+    {
+      "id": "citizen_1",
+      "username": "Carlos",
+      "avatar": "https://images.unsplash.com/photo-1535713875002-d1d0cf377fde?w=200",
+      "role": "citizen",
+      "isDiscordUser": false,
+      "discordTag": "Carlos",
+      "bio": "Ciudadano de Horizonte RP",
+      "createdAt": 1789498343274,
+      "lastActive": 1789498343274
+    },
     {
       "id": "user_leo",
       "username": "Leonardo_Admin",
@@ -349,6 +357,26 @@
     }
   ],
   "serverAuditLogs": [
+    {
+      "id": "log_1789498343275_ztreq",
+      "type": "post_created",
+      "userName": "Carlos",
+      "userId": "citizen_1",
+      "userAvatar": "https://images.unsplash.com/photo-1535713875002-d1d0cf377fde?w=200",
+      "actionText": "Publicación creada en el Muro",
+      "details": "\"Hola desde dispositivo 1\"",
+      "timestamp": 1789498343275
+    },
+    {
+      "id": "log_1789497121581_yj0i1",
+      "type": "post_created",
+      "userName": "TestUser",
+      "userId": "user_test",
+      "userAvatar": "https://images.unsplash.com/photo-1535713875002-d1d0cf377fde?w=100",
+      "actionText": "Publicación creada en el Muro",
+      "details": "\"Probando guardado en disco\"",
+      "timestamp": 1789497121581
+    },
     {
       "id": "log_1789439666509_mehbz",
       "type": "system",

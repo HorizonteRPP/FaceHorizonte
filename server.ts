@@ -30,12 +30,12 @@ function loadDbFromDisk() {
     if (fs.existsSync(DB_FILE)) {
       const raw = fs.readFileSync(DB_FILE, "utf-8");
       const data = JSON.parse(raw);
-      if (Array.isArray(data.serverPosts) && data.serverPosts.length > 0) serverPosts = data.serverPosts;
-      if (Array.isArray(data.serverCars) && data.serverCars.length > 0) serverCars = data.serverCars;
-      if (Array.isArray(data.serverMessages) && data.serverMessages.length > 0) serverMessages = data.serverMessages;
-      if (Array.isArray(data.serverUsers) && data.serverUsers.length > 0) serverUsers = data.serverUsers;
-      if (Array.isArray(data.serverGroups) && data.serverGroups.length > 0) serverGroups = data.serverGroups;
-      if (Array.isArray(data.serverAuditLogs) && data.serverAuditLogs.length > 0) serverAuditLogs = data.serverAuditLogs;
+      if (Array.isArray(data.serverPosts)) serverPosts = data.serverPosts;
+      if (Array.isArray(data.serverCars)) serverCars = data.serverCars;
+      if (Array.isArray(data.serverMessages)) serverMessages = data.serverMessages;
+      if (Array.isArray(data.serverUsers)) serverUsers = data.serverUsers;
+      if (Array.isArray(data.serverGroups)) serverGroups = data.serverGroups;
+      if (Array.isArray(data.serverAuditLogs)) serverAuditLogs = data.serverAuditLogs;
       console.log(`[DB PERSISTENCE] State loaded: ${serverCars.length} autos, ${serverPosts.length} posts, ${serverMessages.length} chats.`);
     } else {
       // First boot: create file
@@ -352,9 +352,12 @@ function addAuditLog(
 }
 
 function upsertServerUser(userData: Partial<UserItem> & { id: string; username: string }) {
-  const existing = serverUsers.find((u) => u.id === userData.id);
+  const existing = serverUsers.find(
+    (u) => u.id === userData.id || u.username.toLowerCase() === userData.username.toLowerCase()
+  );
   const now = Date.now();
   if (existing) {
+    if (userData.id && !existing.id) existing.id = userData.id;
     existing.username = userData.username || existing.username;
     if (userData.avatar) existing.avatar = userData.avatar;
     if (userData.role) existing.role = userData.role;
@@ -680,7 +683,9 @@ async function startServer() {
       return res.status(404).json({ error: "Publicación no encontrada" });
     }
     const post = serverPosts[postIndex];
-    if (post.authorId !== userId && !isAdmin) {
+    const isAuthor = (userId && (post.authorId === userId || post.authorName?.toLowerCase() === req.body?.authorName?.toLowerCase())) ||
+                     (!post.authorId);
+    if (!isAuthor && !isAdmin) {
       return res.status(403).json({ error: "No tienes permiso para eliminar esta publicación." });
     }
     const deleted = serverPosts.splice(postIndex, 1)[0];
@@ -785,7 +790,9 @@ async function startServer() {
       return res.status(404).json({ error: "Vehículo no encontrado" });
     }
     const car = serverCars[carIndex];
-    if (car.sellerId !== sellerId && !isAdmin) {
+    const isSeller = (sellerId && (car.sellerId === sellerId || car.sellerName?.toLowerCase() === req.body?.sellerName?.toLowerCase())) ||
+                     (!car.sellerId);
+    if (!isSeller && !isAdmin) {
       return res.status(403).json({ error: "No tienes permiso para eliminar este vehículo." });
     }
     const removed = serverCars.splice(carIndex, 1)[0];
@@ -864,6 +871,70 @@ async function startServer() {
       return res.json({ success: true, id });
     }
     res.status(404).json({ error: "Mensaje no encontrado" });
+  });
+
+  // Delete all messages in a conversation between two users
+  app.delete("/api/messages/conversation/:userId/:contactId", (req, res) => {
+    const { userId, contactId } = req.params;
+    const initialCount = serverMessages.length;
+    serverMessages = serverMessages.filter(
+      (m) =>
+        !(
+          (m.senderId === userId && m.recipientId === contactId) ||
+          (m.senderId === contactId && m.recipientId === userId)
+        )
+    );
+    const deletedCount = initialCount - serverMessages.length;
+    saveDbToDisk();
+    addAuditLog(
+      'system',
+      'Administrador',
+      'admin',
+      'Conversación vaciada',
+      `Se eliminaron ${deletedCount} mensajes de la conversación`
+    );
+    res.json({ success: true, deletedCount });
+  });
+
+  // Delete all messages entirely (admin cleanup)
+  app.delete("/api/messages", (_req, res) => {
+    const count = serverMessages.length;
+    serverMessages = [];
+    saveDbToDisk();
+    addAuditLog('system', 'Administrador', 'admin', 'Todos los mensajes privados eliminados', `Total eliminados: ${count}`);
+    res.json({ success: true, count });
+  });
+
+  // Delete a specific group message
+  app.delete("/api/groups/:id/messages/:msgId", (req, res) => {
+    const group = serverGroups.find((g) => g.id === req.params.id);
+    if (!group) return res.status(404).json({ error: "Grupo no encontrado" });
+    const { msgId } = req.params;
+    if (group.messages) {
+      const idx = group.messages.findIndex((m) => m.id === msgId);
+      if (idx !== -1) {
+        group.messages.splice(idx, 1);
+        saveDbToDisk();
+        return res.json({ success: true, msgId });
+      }
+    }
+    res.status(404).json({ error: "Mensaje no encontrado en el grupo" });
+  });
+
+  // Delete a specific group post
+  app.delete("/api/groups/:id/posts/:postId", (req, res) => {
+    const group = serverGroups.find((g) => g.id === req.params.id);
+    if (!group) return res.status(404).json({ error: "Grupo no encontrado" });
+    const { postId } = req.params;
+    if (group.posts) {
+      const idx = group.posts.findIndex((p) => p.id === postId);
+      if (idx !== -1) {
+        group.posts.splice(idx, 1);
+        saveDbToDisk();
+        return res.json({ success: true, postId });
+      }
+    }
+    res.status(404).json({ error: "Publicación no encontrada en el grupo" });
   });
 
   // Users Management & Activity Stats API

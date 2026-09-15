@@ -15,7 +15,9 @@ import {
   Settings,
   Sparkles,
   Share2,
-  Check
+  Check,
+  LogIn,
+  Copy
 } from 'lucide-react';
 
 interface HeaderProps {
@@ -54,14 +56,30 @@ export const Header: React.FC<HeaderProps> = ({
   const [menuOpen, setMenuOpen] = useState(false);
   const [profileDropdown, setProfileDropdown] = useState(false);
   const [copiedShare, setCopiedShare] = useState(false);
+  const [shareModalOpen, setShareModalOpen] = useState(false);
+
+  const getCleanShareUrl = () => {
+    return window.location.href.split('?')[0].split('#')[0];
+  };
 
   const handleShareApp = () => {
-    const url = window.location.href.split('?')[0].split('#')[0];
-    if (navigator.clipboard) {
-      navigator.clipboard.writeText(url);
+    const url = getCleanShareUrl();
+    try {
+      if (navigator.clipboard && navigator.clipboard.writeText) {
+        navigator.clipboard.writeText(url)
+          .then(() => {
+            setCopiedShare(true);
+            setTimeout(() => setCopiedShare(false), 3500);
+          })
+          .catch(() => {
+            setShareModalOpen(true);
+          });
+      } else {
+        setShareModalOpen(true);
+      }
+    } catch {
+      setShareModalOpen(true);
     }
-    setCopiedShare(true);
-    setTimeout(() => setCopiedShare(false), 3500);
   };
 
   const isAdminActive = adminSession.isAdmin1 || adminSession.isAdmin2;
@@ -317,6 +335,20 @@ export const Header: React.FC<HeaderProps> = ({
                       <span>Ver Mi Perfil</span>
                     </button>
 
+                    <button
+                      id="dropdown-switch-account-btn"
+                      onClick={() => {
+                        setProfileDropdown(false);
+                        onOpenAuth();
+                      }}
+                      className={`w-full text-left px-3 py-2 rounded-xl text-xs flex items-center gap-2 cursor-pointer ${
+                        isLight ? 'hover:bg-gray-100 text-gray-700' : 'hover:bg-[#282a32] text-gray-200'
+                      }`}
+                    >
+                      <Users className="w-4 h-4 text-indigo-400" />
+                      <span>Cambiar de Cuenta</span>
+                    </button>
+
                     {isAdminActive && (
                       <button
                         id="dropdown-exit-admin-btn"
@@ -348,16 +380,14 @@ export const Header: React.FC<HeaderProps> = ({
                 )}
               </div>
             ) : (
-              /* Direct Discord Button */
+              /* Direct Login Button */
               <button
                 id="header-login-btn"
                 onClick={onOpenAuth}
-                className="px-3.5 py-2 rounded-xl bg-[#5865F2] hover:bg-[#4752C4] text-white text-xs font-extrabold shadow-md transition-all cursor-pointer flex items-center gap-2 group"
+                className="px-3.5 py-2 rounded-xl bg-red-600 hover:bg-red-700 text-white text-xs font-extrabold shadow-md transition-all cursor-pointer flex items-center gap-2 group"
               >
-                <svg className="w-4 h-4 fill-white group-hover:scale-110 transition-transform" viewBox="0 0 127.14 96.36">
-                  <path d="M107.7,8.07A105.15,105.15,0,0,0,81.47,0a72.06,72.06,0,0,0-3.36,6.83A97.68,97.68,0,0,0,49,6.83,72.37,72.37,0,0,0,45.64,0,105.89,105.89,0,0,0,19.39,8.09C2.79,32.65-1.71,56.6.54,80.21h0A105.73,105.73,0,0,0,32.71,96.36,77.7,77.7,0,0,0,39.6,85.25a68.42,68.42,0,0,1-10.85-5.18c.91-.66,1.8-1.34,2.66-2a75.57,75.57,0,0,0,64.32,0c.87.71,1.76,1.39,2.66,2a68.68,68.68,0,0,1-10.87,5.19,77,77,0,0,0,6.89,11.1A105.25,105.25,0,0,0,126.6,80.22h0C129.24,52.84,122.09,29.11,107.7,8.07ZM42.45,65.69C36.18,65.69,31,60,31,53s5-12.74,11.43-12.74S54,45.91,53.89,53,48.84,65.69,42.45,65.69Zm42.24,0C78.41,65.69,73.25,60,73.25,53s5-12.74,11.44-12.74S96.23,45.91,96.12,53,91.08,65.69,84.69,65.69Z" />
-                </svg>
-                <span>Entrar con Discord</span>
+                <LogIn className="w-4 h-4 group-hover:scale-110 transition-transform" />
+                <span>Ingresar / Conectar</span>
               </button>
             )}
 
@@ -426,12 +456,10 @@ export const Header: React.FC<HeaderProps> = ({
                 setMenuOpen(false);
                 onOpenAuth();
               }}
-              className="w-full flex items-center justify-center gap-2 px-3.5 py-2.5 rounded-xl bg-[#5865F2] hover:bg-[#4752C4] text-white text-xs font-extrabold shadow-md cursor-pointer transition-colors"
+              className="w-full flex items-center justify-center gap-2 px-3.5 py-2.5 rounded-xl bg-red-600 hover:bg-red-700 text-white text-xs font-extrabold shadow-md cursor-pointer transition-colors"
             >
-              <svg className="w-4 h-4 fill-white" viewBox="0 0 127.14 96.36">
-                <path d="M107.7,8.07A105.15,105.15,0,0,0,81.47,0a72.06,72.06,0,0,0-3.36,6.83A97.68,97.68,0,0,0,49,6.83,72.37,72.37,0,0,0,45.64,0,105.89,105.89,0,0,0,19.39,8.09C2.79,32.65-1.71,56.6.54,80.21h0A105.73,105.73,0,0,0,32.71,96.36,77.7,77.7,0,0,0,39.6,85.25a68.42,68.42,0,0,1-10.85-5.18c.91-.66,1.8-1.34,2.66-2a75.57,75.57,0,0,0,64.32,0c.87.71,1.76,1.39,2.66,2a68.68,68.68,0,0,1-10.87,5.19,77,77,0,0,0,6.89,11.1A105.25,105.25,0,0,0,126.6,80.22h0C129.24,52.84,122.09,29.11,107.7,8.07ZM42.45,65.69C36.18,65.69,31,60,31,53s5-12.74,11.43-12.74S54,45.91,53.89,53,48.84,65.69,42.45,65.69Zm42.24,0C78.41,65.69,73.25,60,73.25,53s5-12.74,11.44-12.74S96.23,45.91,96.12,53,91.08,65.69,84.69,65.69Z" />
-              </svg>
-              <span>Entrar con Discord</span>
+              <LogIn className="w-4 h-4" />
+              <span>Ingresar / Conectar</span>
             </button>
           )}
 
@@ -441,11 +469,67 @@ export const Header: React.FC<HeaderProps> = ({
                 onToggleTheme();
                 setMenuOpen(false);
               }}
-              className="flex items-center gap-2 text-xs font-bold py-1.5 text-gray-300"
+              className="flex items-center gap-2 text-xs font-bold py-1.5 text-gray-300 cursor-pointer"
             >
               {isLight ? <Moon className="w-4 h-4 text-indigo-500" /> : <Sun className="w-4 h-4 text-amber-400" />}
               <span>{isLight ? 'Cambiar a Modo Negro' : 'Cambiar a Modo Blanco'}</span>
             </button>
+          </div>
+        </div>
+      )}
+
+      {/* Share Modal Dialog */}
+      {shareModalOpen && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/80 backdrop-blur-sm animate-fadeIn">
+          <div className={`w-full max-w-md p-5 rounded-2xl border shadow-2xl space-y-4 ${
+            isLight ? 'bg-white border-gray-200 text-gray-800' : 'bg-[#18191e] border-[#2c2f37] text-white'
+          }`}>
+            <div className="flex items-center justify-between">
+              <div className="flex items-center gap-2">
+                <div className="w-8 h-8 rounded-xl bg-red-600/20 text-red-500 flex items-center justify-center">
+                  <Share2 className="w-4 h-4" />
+                </div>
+                <h3 className="font-bold text-sm">Compartir FaceHorizont RP</h3>
+              </div>
+              <button 
+                onClick={() => setShareModalOpen(false)}
+                className="p-1 rounded-lg opacity-70 hover:opacity-100 cursor-pointer"
+              >
+                <X className="w-4 h-4" />
+              </button>
+            </div>
+            <p className="text-xs opacity-75">
+              Copia este enlace para abrir FaceHorizont en otro dispositivo (celular, otra PC o enviárselo a amigos):
+            </p>
+            <div className={`p-3 rounded-xl border text-xs font-mono break-all select-all flex items-center justify-between gap-2 ${
+              isLight ? 'bg-gray-100 border-gray-300 text-gray-900' : 'bg-[#121316] border-[#313540] text-red-300'
+            }`}>
+              <span>{getCleanShareUrl()}</span>
+            </div>
+            <div className="flex justify-end gap-2">
+              <button
+                onClick={() => {
+                  if (navigator.clipboard) {
+                    navigator.clipboard.writeText(getCleanShareUrl());
+                  }
+                  setCopiedShare(true);
+                  setTimeout(() => setCopiedShare(false), 3000);
+                  setShareModalOpen(false);
+                }}
+                className="px-4 py-2 rounded-xl bg-red-600 hover:bg-red-700 text-white text-xs font-bold transition-all cursor-pointer flex items-center gap-1.5"
+              >
+                <Copy className="w-3.5 h-3.5" />
+                <span>Copiar Enlace</span>
+              </button>
+              <button
+                onClick={() => setShareModalOpen(false)}
+                className={`px-3.5 py-2 rounded-xl border text-xs font-semibold cursor-pointer ${
+                  isLight ? 'bg-gray-100 border-gray-300' : 'bg-[#22242b] border-[#363a45]'
+                }`}
+              >
+                Cerrar
+              </button>
+            </div>
           </div>
         </div>
       )}

@@ -22,7 +22,8 @@ import {
   CheckCircle2, 
   Sparkles, 
   Image as ImageIcon,
-  Share2
+  Share2,
+  Trash2
 } from 'lucide-react';
 
 interface GroupsViewProps {
@@ -35,9 +36,11 @@ interface GroupsViewProps {
   onJoinGroup: (groupId: string) => void;
   onLeaveGroup: (groupId: string) => void;
   onAddGroupPost: (groupId: string, post: GroupPost) => void;
+  onDeleteGroupPost?: (groupId: string, postId: string) => void;
   onToggleGroupPostReaction: (groupId: string, postId: string, type: 'heart' | 'fire' | 'clap') => void;
   onAddGroupPostComment: (groupId: string, postId: string, commentText: string) => void;
   onSendGroupMessage: (groupId: string, message: GroupMessage) => void;
+  onDeleteGroupMessage?: (groupId: string, msgId: string) => void;
   onUpdateMemberPermission: (
     groupId: string, 
     userId: string, 
@@ -55,9 +58,11 @@ export const GroupsView: React.FC<GroupsViewProps> = ({
   onJoinGroup,
   onLeaveGroup,
   onAddGroupPost,
+  onDeleteGroupPost,
   onToggleGroupPostReaction,
   onAddGroupPostComment,
   onSendGroupMessage,
+  onDeleteGroupMessage,
   onUpdateMemberPermission,
   showToast
 }) => {
@@ -649,18 +654,34 @@ export const GroupsView: React.FC<GroupsViewProps> = ({
                       className="p-5 rounded-2xl bg-[#1e0101] border border-red-900/60 shadow-lg space-y-3"
                     >
                       {/* Post Header */}
-                      <div className="flex items-center gap-3">
-                        <img
-                          src={post.authorAvatar}
-                          alt={post.authorName}
-                          className="w-10 h-10 rounded-full object-cover border border-red-800"
-                        />
-                        <div>
-                          <h4 className="text-xs font-bold text-white">{post.authorName}</h4>
-                          <span className="text-[10px] text-red-300/70">
-                            {new Date(post.timestamp).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })} • Muro del Grupo
-                          </span>
+                      <div className="flex items-center justify-between">
+                        <div className="flex items-center gap-3">
+                          <img
+                            src={post.authorAvatar}
+                            alt={post.authorName}
+                            className="w-10 h-10 rounded-full object-cover border border-red-800"
+                          />
+                          <div>
+                            <h4 className="text-xs font-bold text-white">{post.authorName}</h4>
+                            <span className="text-[10px] text-red-300/70">
+                              {new Date(post.timestamp).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })} • Muro del Grupo
+                            </span>
+                          </div>
                         </div>
+
+                        {(post.authorId === currentUser?.id || isLeader || adminSession.isAdmin1 || adminSession.isAdmin2) && onDeleteGroupPost && (
+                          <button
+                            onClick={() => {
+                              if (window.confirm('¿Eliminar esta publicación del grupo?')) {
+                                onDeleteGroupPost(activeGroup.id, post.id);
+                              }
+                            }}
+                            className="p-1.5 rounded-lg text-red-400/70 hover:text-red-200 hover:bg-red-950/80 transition-colors cursor-pointer"
+                            title="Eliminar publicación"
+                          >
+                            <Trash2 className="w-3.5 h-3.5" />
+                          </button>
+                        )}
                       </div>
 
                       {/* Content */}
@@ -853,13 +874,26 @@ export const GroupsView: React.FC<GroupsViewProps> = ({
                             </span>
                           </div>
                           <div
-                            className={`p-3 rounded-2xl text-xs font-medium leading-relaxed ${
+                            className={`group relative p-3 rounded-2xl text-xs font-medium leading-relaxed ${
                               isOwnMessage
                                 ? 'bg-red-700 text-white rounded-tr-none shadow-md'
                                 : 'bg-[#220101] text-red-100 rounded-tl-none border border-red-950 shadow-sm'
                             }`}
                           >
-                            {msg.text}
+                            <p className="break-words">{msg.text}</p>
+                            {(isOwnMessage || isLeader || adminSession.isAdmin1 || adminSession.isAdmin2) && onDeleteGroupMessage && (
+                              <button
+                                onClick={() => {
+                                  if (window.confirm('¿Eliminar este mensaje del grupo?')) {
+                                    onDeleteGroupMessage(activeGroup.id, msg.id);
+                                  }
+                                }}
+                                className="opacity-70 hover:opacity-100 p-0.5 rounded text-red-200 hover:text-white transition-opacity cursor-pointer inline-block mt-1 float-right"
+                                title="Eliminar mensaje"
+                              >
+                                <Trash2 className="w-3 h-3" />
+                              </button>
+                            )}
                           </div>
                         </div>
                       </div>
